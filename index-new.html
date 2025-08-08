@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BattleMap Online - Раскрой карту мира</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗺️</text></svg>">
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- Наши стили -->
+    <link rel="stylesheet" href="/public/css/main.css">
+</head>
+<body>
+    <!-- Карта и канвасы -->
+    <div id="map"></div>
+    <canvas id="fogCanvas"></canvas>
+    <canvas id="gridCanvas"></canvas>
+    
+    <!-- Селектор стиля карты -->
+    <div class="map-style-selector">
+        <select id="mapStyle">
+            <option value="dark">CartoDB Dark Matter (тёмная)</option>
+            <option value="light">CartoDB Positron (светлая)</option>
+            <option value="osm">OpenStreetMap</option>
+            <option value="satellite">ESRI World Imagery (спутник)</option>
+            <option value="watercolor">Stamen Watercolor</option>
+            <option value="toner">Stamen Toner</option>
+            <option value="terrain">Stamen Terrain</option>
+        </select>
+    </div>
+    
+    <!-- UI контейнер -->
+    <div class="ui-container">
+        <!-- Заголовок -->
+        <div class="header">
+            <h1>BattleMap Online</h1>
+            <p class="subtitle">Раскрой реальную карту мира вместе!</p>
+            <p style="font-size: 11px; opacity: 0.5; margin-top: 8px;">
+                ЛКМ - раскрыть | Shift+ЛКМ или ПКМ - перетащить | Колесо - зум
+            </p>
+        </div>
+        
+        <!-- Основная статистика -->
+        <div class="stats">
+            <div class="stat-item">
+                <span class="stat-label">Раскрыто км²</span>
+                <span class="stat-value" id="areaExplored">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Клеток</span>
+                <span class="stat-value" id="cellsRevealed">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Размер клетки</span>
+                <span class="stat-value" id="cellSize">10 км</span>
+            </div>
+        </div>
+        
+        <!-- Онлайн статистика -->
+        <div class="online-stats">
+            <div class="online-stat-item">
+                <span class="online-stat-label">Всего клеток</span>
+                <span class="online-stat-value" id="totalCells">0</span>
+            </div>
+            <div class="online-stat-item">
+                <span class="online-stat-label">Игроков онлайн</span>
+                <span class="online-stat-value" id="onlinePlayers">1</span>
+            </div>
+        </div>
+        
+        <!-- Кнопки управления -->
+        <div class="controls">
+            <button class="control-btn" id="zoomIn" title="Приблизить">+</button>
+            <button class="control-btn" id="zoomOut" title="Отдалить">−</button>
+            <button class="control-btn" id="resetView" title="Сбросить вид">🏠</button>
+        </div>
+        
+        <!-- Топ стран -->
+        <div class="top-countries">
+            <h3>🏆 Топ стран</h3>
+            <div id="countriesList"></div>
+        </div>
+        
+        <!-- Статус синхронизации -->
+        <div class="sync-status" id="syncStatus"></div>
+    </div>
+    
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Модули приложения -->
+    <script type="module">
+        // Импортируем главный модуль приложения
+        import('/src/client/js/app.js').then(() => {
+            console.log('✅ BattleMap Online loaded successfully');
+        }).catch(error => {
+            console.error('❌ Failed to load BattleMap Online:', error);
+            // Fallback на встроенную версию если модули не загрузились
+            loadFallbackVersion();
+        });
+        
+        // Резервная версия на случай проблем с модулями
+        function loadFallbackVersion() {
+            console.log('Loading fallback version...');
+            const script = document.createElement('script');
+            script.src = '/src/client/js/battlemap-bundle.js';
+            document.body.appendChild(script);
+        }
+    </script>
+</body>
+</html>

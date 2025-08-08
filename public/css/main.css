@@ -1,0 +1,365 @@
+/* BattleMap Online - Главные стили */
+
+/* Базовые стили */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background: #0a0a0a;
+    color: #ffffff;
+    overflow: hidden;
+    user-select: none;
+}
+
+/* Карта и канвасы */
+#map {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 1;
+    filter: saturate(1.5) contrast(1.2);
+}
+
+#fogCanvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 2;
+    pointer-events: none;
+}
+
+#gridCanvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 3;
+    pointer-events: auto;
+}
+
+/* UI Контейнер */
+.ui-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 10;
+    pointer-events: none;
+}
+
+/* Заголовок */
+.header {
+    background: linear-gradient(180deg, rgba(10,10,10,0.95) 0%, rgba(10,10,10,0) 100%);
+    padding: 20px;
+    text-align: center;
+    pointer-events: auto;
+}
+
+h1 {
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    margin-bottom: 4px;
+}
+
+.subtitle {
+    font-size: 12px;
+    opacity: 0.7;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+/* Статистика */
+.stats {
+    position: fixed;
+    top: 100px;
+    left: 20px;
+    background: rgba(20, 20, 20, 0.9);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    padding: 16px;
+    pointer-events: auto;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    z-index: 10;
+}
+
+.stat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    min-width: 180px;
+}
+
+.stat-item:last-child {
+    margin-bottom: 0;
+}
+
+.stat-label {
+    font-size: 12px;
+    opacity: 0.6;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stat-value {
+    font-size: 18px;
+    font-weight: 600;
+    color: #4CAF50;
+}
+
+/* Кнопки управления */
+.controls {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    pointer-events: auto;
+    z-index: 10;
+}
+
+.control-btn {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: rgba(30, 30, 30, 0.9);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    font-size: 20px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.control-btn:hover {
+    background: rgba(50, 50, 50, 0.9);
+    transform: scale(1.1);
+}
+
+.control-btn:active {
+    transform: scale(0.95);
+}
+
+/* Селектор стиля карты */
+.map-style-selector {
+    position: fixed;
+    bottom: 30px;
+    left: 30px;
+    background: rgba(20, 20, 20, 0.9);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    padding: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    z-index: 1000;
+    pointer-events: auto;
+}
+
+.map-style-selector select {
+    background: rgba(40, 40, 40, 0.9);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    min-width: 250px;
+    position: relative;
+    z-index: 1001;
+}
+
+.map-style-selector select:focus {
+    outline: none;
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+.map-style-selector select option {
+    background: #1a1a1a;
+    color: white;
+    padding: 10px;
+}
+
+/* Информационная панель */
+.info-panel {
+    position: fixed;
+    top: 100px;
+    right: 20px;
+    background: rgba(20, 20, 20, 0.9);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    padding: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    z-index: 10;
+    font-size: 11px;
+    opacity: 0.8;
+    max-width: 200px;
+}
+
+/* Leaflet переопределения */
+.leaflet-tile {
+    filter: brightness(0.8);
+}
+
+.leaflet-control-zoom {
+    display: none;
+}
+
+.leaflet-control-attribution {
+    background: rgba(0,0,0,0.7) !important;
+    color: rgba(255,255,255,0.5) !important;
+    font-size: 10px !important;
+}
+
+.leaflet-control-attribution a {
+    color: rgba(255,255,255,0.7) !important;
+}
+
+/* Онлайн статистика */
+.online-stats {
+    position: fixed;
+    top: 250px;
+    left: 20px;
+    background: rgba(20, 20, 20, 0.9);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    padding: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    z-index: 10;
+    pointer-events: auto;
+}
+
+.online-stat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    min-width: 180px;
+}
+
+.online-stat-label {
+    font-size: 11px;
+    opacity: 0.5;
+}
+
+.online-stat-value {
+    font-size: 14px;
+    font-weight: 600;
+    color: #2196F3;
+}
+
+/* Топ стран */
+.top-countries {
+    position: fixed;
+    bottom: 120px;
+    left: 30px;
+    background: rgba(20, 20, 20, 0.9);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    padding: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    z-index: 10;
+    pointer-events: auto;
+    max-width: 250px;
+}
+
+.top-countries h3 {
+    font-size: 12px;
+    margin-bottom: 10px;
+    opacity: 0.8;
+    text-transform: uppercase;
+}
+
+.country-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+    font-size: 11px;
+}
+
+.country-cells {
+    color: #4CAF50;
+    font-weight: 600;
+}
+
+/* Статус синхронизации */
+.sync-status {
+    position: fixed;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(20, 20, 20, 0.9);
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 10px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    z-index: 100;
+    pointer-events: none;
+}
+
+.sync-status.show {
+    opacity: 1;
+}
+
+/* Анимации */
+@keyframes fadeInOut {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+    20% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    80% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+}
+
+.notification {
+    animation: fadeInOut 3s;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .header {
+        padding: 15px;
+    }
+    
+    h1 {
+        font-size: 20px;
+    }
+    
+    .stats, .online-stats {
+        left: 10px;
+        padding: 12px;
+    }
+    
+    .controls {
+        bottom: 20px;
+        right: 20px;
+    }
+    
+    .control-btn {
+        width: 40px;
+        height: 40px;
+        font-size: 16px;
+    }
+    
+    .map-style-selector {
+        bottom: 20px;
+        left: 20px;
+    }
+    
+    .top-countries {
+        bottom: 100px;
+        left: 20px;
+    }
+}
