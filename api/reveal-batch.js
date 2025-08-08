@@ -1,8 +1,8 @@
 import { Redis } from '@upstash/redis';
 
 const redis = new Redis({
-    url: process.env.UPSTASH_REDIS_REST_URL,
-    token: process.env.UPSTASH_REDIS_REST_TOKEN
+    url: process.env.KV_REST_API_URL,
+    token: process.env.KV_REST_API_TOKEN
 });
 
 // Rate limiting на уровне IP
@@ -83,62 +83,78 @@ export default async function handler(req, res) {
             return res.status(400).json({ error: 'No valid cells in batch' });
         }
         
-        // Пакетная обработка в Redis с использованием pipeline
-        const pipeline = redis.pipeline();
-        const gameStateKey = 'battlemap:revealed:cells';
-        const playerKey = `battlemap:player:${playerId || 'anonymous'}`;
-        const dailyKey = `battlemap:daily:${new Date().toISOString().split('T')[0]}`;
+        // Пакетная обработка клеток
+        const gameStateKey = 'revealed:cells';
+        const timestamp = Date.now();
         
-        // Добавляем клетки в общий набор
-        validCells.forEach(cell => {
-            pipeline.sadd(gameStateKey, cell);
+        // Добавляем все клетки одной командой
+        if (validCells.length > 0) {
+            await redis.sadd(gameStateKey, ...validCells);
+        }
+        
+        // Обновляем timeline для каждой клетки
+        const timelinePromises = validCells.map(cell => 
+            redis.zadd('revealed:timeline', {
+                score: timestamp,
+                member: `${cell}:${playerId || 'anonymous'}`
+            })
+        );
+        
+        await Promise.all(timelinePromises);
+        
+        // Определяем страны для клеток (упрощенно - по координатам)
+        for (const cell of validCells) {
+            const [lat, lng] = cell.split(',').map(parseFloat);
+            let countryCode = 'XX'; // Неизвестная страна по умолчанию
             
-            // Статистика по игроку
-            if (playerId) {
-                pipeline.sadd(playerKey, cell);
+            // Простая логика определения страны по координатам
+            if (lat > 41 && lat < 82 && lng > -10 && lng < 180) {
+                if (lng > 19 && lng < 180) countryCode = 'RU'; // Россия
+                else if (lng > -10 && lng < 3) countryCode = 'GB'; // Великобритания
+                else if (lng > 3 && lng < 19) countryCode = 'DE'; // Германия/Центральная Европа
+            } else if (lat > 25 && lat < 50 && lng > -130 && lng < -65) {
+                countryCode = 'US'; // США
+            } else if (lat > 45 && lat < 75 && lng > -140 && lng < -50) {
+                countryCode = 'CA'; // Канада
+            } else if (lat > -35 && lat < 12 && lng > -75 && lng < -35) {
+                countryCode = 'BR'; // Бразилия
+            } else if (lat > 18 && lat < 54 && lng > 73 && lng < 135) {
+                countryCode = 'CN'; // Китай
+            } else if (lat > -45 && lat < -10 && lng > 112 && lng < 155) {
+                countryCode = 'AU'; // Австралия
+            } else if (lat > 8 && lat < 37 && lng > 68 && lng < 97) {
+                countryCode = 'IN'; // Индия
+            } else if (lat > 36 && lat < 43 && lng > -10 && lng < 3) {
+                countryCode = 'ES'; // Испания
+            } else if (lat > 42 && lat < 51 && lng > -5 && lng < 8) {
+                countryCode = 'FR'; // Франция
+            } else if (lat > 36 && lat < 47 && lng > 6 && lng < 19) {
+                countryCode = 'IT'; // Италия
             }
             
-            // Ежедневная статистика
-            pipeline.sadd(dailyKey, cell);
+            // Увеличиваем счетчик для страны
+            await redis.hincrby('country:revealed:count', countryCode, 1);
+        }
+        
+        // Получаем общую статистику
+        const totalRevealed = await redis.scard(gameStateKey);
+        
+        // Подсчитываем онлайн игроков (активность за последние 5 минут)
+        const now = Date.now();
+        const fiveMinutesAgo = now - (5 * 60 * 1000);
+        const recentActivity = await redis.zrange('revealed:timeline', fiveMinutesAgo, now, {
+            byScore: true
+        }) || [];
+        
+        const uniquePlayers = new Set();
+        recentActivity.forEach(item => {
+            if (item && item.member) {
+                const parts = item.member.split(':');
+                if (parts[1]) uniquePlayers.add(parts[1]);
+            }
         });
         
-        // Обновляем счетчики
-        pipeline.incrby('battlemap:stats:total_reveals', validCells.length);
-        pipeline.incr('battlemap:stats:total_batches');
-        
-        // Обновляем последнюю активность
-        pipeline.set('battlemap:last_activity', Date.now());
-        
-        // TTL для ежедневной статистики (7 дней)
-        pipeline.expire(dailyKey, 7 * 24 * 60 * 60);
-        
-        // Выполняем все команды одним запросом
-        await pipeline.exec();
-        
-        // Получаем общую статистику (кэшируем на 5 секунд)
-        const cacheKey = 'battlemap:cache:stats';
-        let stats = await redis.get(cacheKey);
-        
-        if (!stats) {
-            const [totalRevealed, onlinePlayers] = await Promise.all([
-                redis.scard(gameStateKey),
-                redis.get('battlemap:online_players') || 1
-            ]);
-            
-            stats = {
-                totalRevealed,
-                onlinePlayers,
-                processedCells: validCells.length,
-                rejectedCells: cells.length - validCells.length
-            };
-            
-            // Кэшируем на 5 секунд
-            await redis.setex(cacheKey, 5, JSON.stringify(stats));
-        } else {
-            stats = JSON.parse(stats);
-            stats.processedCells = validCells.length;
-            stats.rejectedCells = cells.length - validCells.length;
-        }
+        const onlinePlayers = Math.max(1, uniquePlayers.size);
         
         // Логирование для мониторинга
         console.log(`Batch processed: ${validCells.length} cells from ${clientIp}`);

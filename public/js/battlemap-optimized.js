@@ -183,16 +183,22 @@ class OptimizedBattleMap {
         this.log(`Отправка батча: ${batch.length} клеток`, 'debug');
         
         try {
-            // Отправляем батч на сервер
-            const response = await fetch('/api/reveal-batch', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    cells: batch,
-                    playerId: this.playerId,
-                    timestamp: Date.now()
-                })
+            // Отправляем каждую клетку отдельно (временно, пока не починим батчинг)
+            const promises = batch.map(cellKey => {
+                const [lat, lng] = cellKey.split(',');
+                return fetch('/api/reveal-cell', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        lat: parseFloat(lat),
+                        lng: parseFloat(lng),
+                        playerId: this.playerId
+                    })
+                });
             });
+            
+            const responses = await Promise.all(promises);
+            const response = responses[0]; // Используем первый ответ для проверки
             
             if (response.ok) {
                 const data = await response.json();
