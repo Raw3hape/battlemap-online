@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>BattleMap Online - Раскрой карту мира вместе!</title>
+    <title>BattleMap - Фиксированная сетка</title>
     
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -83,21 +83,6 @@
             text-transform: uppercase;
         }
         
-        .online-indicator {
-            display: inline-block;
-            padding: 4px 12px;
-            background: rgba(76, 175, 80, 0.2);
-            border: 1px solid #4CAF50;
-            border-radius: 20px;
-            font-size: 11px;
-            margin-top: 8px;
-        }
-        
-        .online-indicator::before {
-            content: '🟢';
-            margin-right: 6px;
-        }
-        
         .stats {
             position: fixed;
             top: 100px;
@@ -111,72 +96,16 @@
             z-index: 10;
         }
         
-        .country-stats {
-            position: fixed;
-            top: 100px;
-            right: 20px;
-            background: rgba(20, 20, 20, 0.9);
-            backdrop-filter: blur(10px);
-            border-radius: 12px;
-            padding: 16px;
-            pointer-events: auto;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            z-index: 10;
-            min-width: 280px;
-            max-height: 400px;
-            overflow-y: auto;
-        }
-        
-        .country-stats h3 {
-            font-size: 14px;
-            margin-bottom: 12px;
-            opacity: 0.8;
-        }
-        
-        .country-item {
-            display: flex;
-            align-items: center;
-            margin-bottom: 10px;
-            gap: 8px;
-        }
-        
-        .country-flag {
-            font-size: 20px;
-        }
-        
-        .country-name {
-            flex: 1;
-            font-size: 13px;
-        }
-        
-        .country-progress {
-            width: 100px;
-            height: 6px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 3px;
-            overflow: hidden;
-        }
-        
-        .country-progress-bar {
-            height: 100%;
-            background: linear-gradient(90deg, #4CAF50, #8BC34A);
-            transition: width 0.3s ease;
-        }
-        
-        .country-percent {
-            font-size: 12px;
-            font-weight: 600;
-            color: #4CAF50;
-            min-width: 45px;
-            text-align: right;
-        }
-        
         .stat-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 12px;
             min-width: 180px;
+        }
+        
+        .stat-item:last-child {
+            margin-bottom: 0;
         }
         
         .stat-label {
@@ -224,6 +153,10 @@
             transform: scale(1.1);
         }
         
+        .control-btn:active {
+            transform: scale(0.95);
+        }
+        
         .map-style-selector {
             position: fixed;
             bottom: 30px;
@@ -245,73 +178,53 @@
             border-radius: 6px;
             cursor: pointer;
             font-size: 14px;
-            min-width: 200px;
+            min-width: 250px;
+            position: relative;
+            z-index: 1001;
         }
         
-        .reveal-animation {
-            position: absolute;
-            pointer-events: none;
-            z-index: 100;
-            animation: revealPulse 1s ease-out;
+        .map-style-selector select:focus {
+            outline: none;
+            border-color: rgba(255, 255, 255, 0.4);
         }
         
-        @keyframes revealPulse {
-            0% {
-                transform: scale(0);
-                opacity: 1;
-                border: 3px solid #4CAF50;
-            }
-            100% {
-                transform: scale(3);
-                opacity: 0;
-                border: 1px solid #4CAF50;
-            }
+        .map-style-selector select option {
+            background: #1a1a1a;
+            color: white;
+            padding: 10px;
         }
         
-        .loading-overlay {
+        .info-panel {
             position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(10, 10, 10, 0.95);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
+            top: 100px;
+            right: 20px;
+            background: rgba(20, 20, 20, 0.9);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 10;
+            font-size: 11px;
+            opacity: 0.8;
+            max-width: 200px;
         }
         
-        .loading-spinner {
-            width: 50px;
-            height: 50px;
-            border: 3px solid rgba(255, 255, 255, 0.1);
-            border-top-color: #4CAF50;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
+        .leaflet-tile {
+            filter: brightness(0.8);
         }
         
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        
-        .error-message {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(244, 67, 54, 0.9);
-            padding: 20px;
-            border-radius: 8px;
+        .leaflet-control-zoom {
             display: none;
-            z-index: 10000;
         }
         
-        .leaflet-control-zoom { display: none; }
         .leaflet-control-attribution {
             background: rgba(0,0,0,0.7) !important;
             color: rgba(255,255,255,0.5) !important;
             font-size: 10px !important;
+        }
+        
+        .leaflet-control-attribution a {
+            color: rgba(255,255,255,0.7) !important;
         }
     </style>
 </head>
@@ -320,58 +233,55 @@
     <canvas id="fogCanvas"></canvas>
     <canvas id="gridCanvas"></canvas>
     
-    <div class="loading-overlay" id="loadingOverlay">
-        <div class="loading-spinner"></div>
-        <p style="margin-top: 20px; opacity: 0.7;">Подключение к серверу...</p>
-    </div>
-    
-    <div class="error-message" id="errorMessage"></div>
-    
+    <!-- Дропдаун вынесен отдельно для правильной работы -->
     <div class="map-style-selector">
         <select id="mapStyle" onchange="window.battleMap && window.battleMap.changeMapStyle(this.value)">
-            <option value="osm">OpenStreetMap</option>
-            <option value="satellite">Спутник</option>
-            <option value="positron">Светлая</option>
-            <option value="dark">Тёмная</option>
+            <option value="osm">OpenStreetMap Standard</option>
+            <option value="hot">OpenStreetMap HOT</option>
+            <option value="topo">OpenTopoMap (топографическая)</option>
+            <option value="cycle">CyclOSM (для велосипедистов)</option>
+            <option value="positron">CartoDB Positron (светлая)</option>
+            <option value="dark">CartoDB Dark Matter (тёмная)</option>
+            <option value="satellite">ESRI World Imagery (спутник)</option>
+            <option value="wikimedia">Wikimedia Maps</option>
         </select>
     </div>
     
     <div class="ui-container">
         <div class="header">
-            <h1>BattleMap Online</h1>
-            <p class="subtitle">Раскрывайте карту мира вместе!</p>
-            <div class="online-indicator" id="onlineStatus">
-                <span id="onlineCount">Подключение...</span>
-            </div>
+            <h1>BattleMap</h1>
+            <p class="subtitle">Раскрой реальную карту мира</p>
+            <p style="font-size: 11px; opacity: 0.5; margin-top: 8px;">
+                ЛКМ - раскрыть | Shift+ЛКМ или ПКМ - перетащить | Колесо - зум
+            </p>
         </div>
         
         <div class="stats">
             <div class="stat-item">
-                <span class="stat-label">Мир раскрыт</span>
-                <span class="stat-value" id="worldProgress">0%</span>
+                <span class="stat-label">Раскрыто км²</span>
+                <span class="stat-value" id="areaRevealed">0</span>
             </div>
             <div class="stat-item">
-                <span class="stat-label">Всего клеток</span>
-                <span class="stat-value" id="totalCells">0</span>
+                <span class="stat-label">Клеток</span>
+                <span class="stat-value" id="cellsRevealed">0</span>
             </div>
             <div class="stat-item">
-                <span class="stat-label">Ваш вклад</span>
-                <span class="stat-value" id="userCells">0</span>
-            </div>
-        </div>
-        
-        <div class="country-stats">
-            <h3>🏆 Топ стран по раскрытию</h3>
-            <div id="countryList">
-                <div style="opacity: 0.5; text-align: center; padding: 20px;">
-                    Загрузка...
-                </div>
+                <span class="stat-label">Размер клетки</span>
+                <span class="stat-value" id="cellSize">10 км</span>
             </div>
         </div>
         
         <div class="controls">
+            <button class="control-btn" onclick="window.battleMap && window.battleMap.resetFog()">↺</button>
             <button class="control-btn" onclick="window.battleMap && window.battleMap.toggleGrid()">⊞</button>
-            <button class="control-btn" onclick="window.battleMap && window.battleMap.refreshStats()">🔄</button>
+            <button class="control-btn" onclick="window.battleMap && window.battleMap.saveProgress()">💾</button>
+            <button class="control-btn" onclick="window.battleMap && window.battleMap.loadProgress()">📂</button>
+        </div>
+        
+        <div class="info-panel">
+            <div style="margin-bottom: 8px;">📍 <span id="currentLocation">-</span></div>
+            <div style="margin-bottom: 8px;">🌍 Зум: <span id="zoomLevel">5</span></div>
+            <div>📐 Сетка: 10×10 км</div>
         </div>
     </div>
     
@@ -379,12 +289,7 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     
     <script>
-        // Конфигурация API
-        const API_BASE = window.location.hostname === 'localhost' 
-            ? 'http://localhost:3000/api'
-            : '/api';
-        
-        class OnlineBattleMap {
+        class FixedGridBattleMap {
             constructor() {
                 this.map = null;
                 this.fogCanvas = document.getElementById('fogCanvas');
@@ -392,32 +297,31 @@
                 this.fogCtx = this.fogCanvas.getContext('2d', { willReadFrequently: true });
                 this.gridCtx = this.gridCanvas.getContext('2d');
                 
+                // ФИКСИРОВАННЫЙ размер клетки
                 this.CELL_SIZE_KM = 10;
-                this.CELL_SIZE_LAT = 10 / 111;
+                // Размер в градусах широты (постоянный)
+                this.CELL_SIZE_LAT = 10 / 111; // ~0.09 градуса
                 
+                // Хранилище раскрытых клеток
                 this.revealedCells = new Set();
                 this.showGrid = true;
-                this.userId = this.getOrCreateUserId();
-                this.userRevealedCount = 0;
+                
+                this.isDragging = false;
+                this.mouseDown = false;
+                this.dragStartX = 0;
+                this.dragStartY = 0;
+                
+                this.currentZoom = 5;
+                this.hoverCell = null;
                 
                 this.init();
             }
             
-            getOrCreateUserId() {
-                let userId = localStorage.getItem('battlemap_userId');
-                if (!userId) {
-                    userId = 'user_' + Math.random().toString(36).substr(2, 9);
-                    localStorage.setItem('battlemap_userId', userId);
-                }
-                return userId;
-            }
-            
-            async init() {
+            init() {
                 this.setupCanvas();
                 this.setupMap();
                 this.setupEventListeners();
-                await this.loadWorldState();
-                document.getElementById('loadingOverlay').style.display = 'none';
+                this.loadProgress();
             }
             
             setupCanvas() {
@@ -426,16 +330,19 @@
                     this.fogCanvas.height = window.innerHeight;
                     this.gridCanvas.width = window.innerWidth;
                     this.gridCanvas.height = window.innerHeight;
-                    if (this.map) this.render();
+                    if (this.map) {
+                        this.render();
+                    }
                 };
+                
                 resize();
                 window.addEventListener('resize', resize);
             }
             
             setupMap() {
                 this.map = L.map('map', {
-                    center: [48.8566, 2.3522], // Париж
-                    zoom: 6,
+                    center: [55.7558, 37.6173], // Москва
+                    zoom: 10,
                     zoomControl: false,
                     attributionControl: true
                 });
@@ -445,7 +352,23 @@
                     attribution: '© OpenStreetMap'
                 }).addTo(this.map);
                 
-                this.map.on('zoomend move', () => this.render());
+                this.currentZoom = this.map.getZoom();
+                
+                // Обработчики событий карты
+                this.map.on('zoomend', () => {
+                    this.currentZoom = this.map.getZoom();
+                    this.updateUI();
+                    this.render();
+                });
+                
+                this.map.on('move', () => {
+                    this.render();
+                });
+                
+                this.map.whenReady(() => {
+                    this.updateUI();
+                    this.render();
+                });
             }
             
             changeMapStyle(style) {
@@ -453,182 +376,217 @@
                     this.map.removeLayer(this.tileLayer);
                 }
                 
-                let url;
+                let url, attribution;
+                
                 switch(style) {
-                    case 'satellite':
-                        url = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+                    case 'hot':
+                        url = 'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png';
+                        attribution = '© OpenStreetMap Contributors, HOT';
+                        break;
+                    case 'topo':
+                        url = 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png';
+                        attribution = '© OpenTopoMap';
+                        break;
+                    case 'cycle':
+                        url = 'https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png';
+                        attribution = '© CyclOSM | © OpenStreetMap';
                         break;
                     case 'positron':
                         url = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png';
+                        attribution = '© CartoDB | © OpenStreetMap';
                         break;
                     case 'dark':
                         url = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png';
+                        attribution = '© CartoDB | © OpenStreetMap';
                         break;
+                    case 'satellite':
+                        url = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+                        attribution = '© ESRI';
+                        break;
+                    case 'wikimedia':
+                        url = 'https://maps.wikimedia.org/osm-intl/{z}/{x}/{y}.png';
+                        attribution = '© Wikimedia | © OpenStreetMap';
+                        break;
+                    case 'osm':
                     default:
                         url = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+                        attribution = '© OpenStreetMap';
+                        break;
                 }
                 
-                this.tileLayer = L.tileLayer(url, { maxZoom: 19 }).addTo(this.map);
+                this.tileLayer = L.tileLayer(url, {
+                    maxZoom: 19,
+                    attribution: attribution
+                }).addTo(this.map);
             }
             
-            async loadWorldState() {
-                try {
-                    const response = await fetch(`${API_BASE}/world-state`);
-                    const data = await response.json();
-                    
-                    if (data.success !== false) {
-                        // Загружаем раскрытые клетки
-                        this.revealedCells = new Set(data.revealedCells || []);
-                        
-                        // Обновляем статистику
-                        this.updateStats(data);
-                        this.updateCountryStats(data.countryStats || []);
-                        
-                        // Обновляем онлайн статус
-                        document.getElementById('onlineCount').textContent = 
-                            `${data.totalRevealed || 0} клеток раскрыто`;
-                    }
-                    
-                    this.render();
-                } catch (error) {
-                    console.error('Failed to load world state:', error);
-                    document.getElementById('onlineStatus').innerHTML = 
-                        '<span style="color: #f44336;">⚠️ Офлайн режим</span>';
-                }
-            }
-            
-            updateStats(data) {
-                const worldPercent = data.worldPercentage || '0.0000';
-                document.getElementById('worldProgress').textContent = worldPercent + '%';
-                document.getElementById('totalCells').textContent = 
-                    (data.totalRevealed || 0).toLocaleString();
+            // Преобразует географические координаты в индекс клетки сетки
+            latLngToGridCell(lat, lng) {
+                // Используем фиксированную сетку без учета косинуса
+                // Это гарантирует, что сетка всегда будет выровнена
+                const gridLat = Math.floor(lat / this.CELL_SIZE_LAT) * this.CELL_SIZE_LAT;
+                const gridLng = Math.floor(lng / this.CELL_SIZE_LAT) * this.CELL_SIZE_LAT;
                 
-                // Подсчитываем клетки пользователя (локально)
-                const userCells = localStorage.getItem('battlemap_userCells');
-                document.getElementById('userCells').textContent = userCells || '0';
-            }
-            
-            updateCountryStats(countries) {
-                const container = document.getElementById('countryList');
-                
-                if (!countries || countries.length === 0) {
-                    container.innerHTML = '<div style="opacity: 0.5; text-align: center;">Нет данных</div>';
-                    return;
-                }
-                
-                container.innerHTML = countries.map((country, index) => `
-                    <div class="country-item">
-                        <span style="opacity: 0.5; min-width: 20px;">${index + 1}</span>
-                        <span class="country-flag">${this.getFlag(country.code)}</span>
-                        <span class="country-name">${country.name}</span>
-                        <div class="country-progress">
-                            <div class="country-progress-bar" style="width: ${country.percentage}%"></div>
-                        </div>
-                        <span class="country-percent">${country.percentage}%</span>
-                    </div>
-                `).join('');
-            }
-            
-            getFlag(code) {
-                const flags = {
-                    'RU': '🇷🇺', 'FR': '🇫🇷', 'DE': '🇩🇪', 'IT': '🇮🇹',
-                    'ES': '🇪🇸', 'GB': '🇬🇧', 'US': '🇺🇸', 'CN': '🇨🇳',
-                    'BR': '🇧🇷', 'AU': '🇦🇺', 'CA': '🇨🇦', 'IN': '🇮🇳',
-                    'JP': '🇯🇵'
+                return {
+                    lat: gridLat,
+                    lng: gridLng,
+                    key: `${gridLat.toFixed(6)},${gridLng.toFixed(6)}`
                 };
-                return flags[code] || '🏳️';
+            }
+            
+            // Преобразует пиксели экрана в географические координаты
+            pixelToLatLng(x, y) {
+                const point = L.point(x, y);
+                return this.map.containerPointToLatLng(point);
+            }
+            
+            // Преобразует географические координаты в пиксели экрана
+            latLngToPixel(lat, lng) {
+                const point = this.map.latLngToContainerPoint([lat, lng]);
+                return { x: point.x, y: point.y };
             }
             
             setupEventListeners() {
                 this.gridCanvas.addEventListener('mousedown', (e) => {
-                    if (!e.shiftKey && e.button === 0) {
+                    if (e.shiftKey || e.button === 2) {
+                        this.isDragging = true;
+                        this.dragStartX = e.clientX;
+                        this.dragStartY = e.clientY;
+                        this.gridCanvas.style.cursor = 'grab';
+                    } else {
+                        this.mouseDown = true;
+                        this.dragStartX = e.clientX;
+                        this.dragStartY = e.clientY;
                         this.revealAt(e.clientX, e.clientY);
                     }
                 });
                 
+                this.gridCanvas.addEventListener('mousemove', (e) => {
+                    if (this.isDragging) {
+                        const dx = e.clientX - this.dragStartX;
+                        const dy = e.clientY - this.dragStartY;
+                        
+                        const center = this.map.getCenter();
+                        const point = this.map.latLngToContainerPoint(center);
+                        point.x -= dx;
+                        point.y -= dy;
+                        
+                        this.map.panTo(this.map.containerPointToLatLng(point), {animate: false});
+                        
+                        this.dragStartX = e.clientX;
+                        this.dragStartY = e.clientY;
+                    } else if (this.mouseDown) {
+                        const dx = Math.abs(e.clientX - this.dragStartX);
+                        const dy = Math.abs(e.clientY - this.dragStartY);
+                        
+                        if (dx > 5 || dy > 5) {
+                            this.mouseDown = false;
+                            this.isDragging = true;
+                            this.gridCanvas.style.cursor = 'grab';
+                        } else {
+                            this.revealAt(e.clientX, e.clientY);
+                        }
+                    }
+                    
+                    this.updateHover(e.clientX, e.clientY);
+                    this.updateLocationInfo(e.clientX, e.clientY);
+                });
+                
+                this.gridCanvas.addEventListener('mouseup', () => {
+                    this.mouseDown = false;
+                    this.isDragging = false;
+                    this.gridCanvas.style.cursor = 'default';
+                });
+                
+                this.gridCanvas.addEventListener('mouseleave', () => {
+                    this.mouseDown = false;
+                    this.isDragging = false;
+                    this.hoverCell = null;
+                    this.gridCanvas.style.cursor = 'default';
+                    this.render();
+                });
+                
+                this.gridCanvas.addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                });
+                
+                this.gridCanvas.addEventListener('wheel', (e) => {
+                    e.preventDefault();
+                    const delta = e.deltaY > 0 ? -1 : 1;
+                    this.map.setZoom(this.map.getZoom() + delta);
+                });
+                
+                // Touch события
+                let touchStartTime = 0;
                 this.gridCanvas.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    touchStartTime = Date.now();
+                    if (e.touches.length === 1) {
+                        const touch = e.touches[0];
+                        this.dragStartX = touch.clientX;
+                        this.dragStartY = touch.clientY;
+                        this.revealAt(touch.clientX, touch.clientY);
+                        this.mouseDown = true;
+                    }
+                });
+                
+                this.gridCanvas.addEventListener('touchmove', (e) => {
                     e.preventDefault();
                     if (e.touches.length === 1) {
                         const touch = e.touches[0];
-                        this.revealAt(touch.clientX, touch.clientY);
+                        const dx = Math.abs(touch.clientX - this.dragStartX);
+                        const dy = Math.abs(touch.clientY - this.dragStartY);
+                        
+                        if (Date.now() - touchStartTime > 200 && (dx > 10 || dy > 10)) {
+                            // Это перетаскивание
+                            this.mouseDown = false;
+                            const center = this.map.getCenter();
+                            const point = this.map.latLngToContainerPoint(center);
+                            point.x -= (touch.clientX - this.dragStartX);
+                            point.y -= (touch.clientY - this.dragStartY);
+                            
+                            this.map.panTo(this.map.containerPointToLatLng(point), {animate: false});
+                            
+                            this.dragStartX = touch.clientX;
+                            this.dragStartY = touch.clientY;
+                        } else if (this.mouseDown) {
+                            // Раскрываем клетки
+                            this.revealAt(touch.clientX, touch.clientY);
+                        }
                     }
+                });
+                
+                this.gridCanvas.addEventListener('touchend', () => {
+                    this.mouseDown = false;
                 });
             }
             
-            latLngToGridCell(lat, lng) {
-                const gridLat = Math.floor(lat / this.CELL_SIZE_LAT) * this.CELL_SIZE_LAT;
-                const gridLng = Math.floor(lng / this.CELL_SIZE_LAT) * this.CELL_SIZE_LAT;
-                return {
-                    lat: gridLat,
-                    lng: gridLng,
-                    key: `${gridLat.toFixed(2)},${gridLng.toFixed(2)}`
-                };
-            }
-            
-            async revealAt(x, y) {
-                const point = L.point(x, y);
-                const latLng = this.map.containerPointToLatLng(point);
+            updateHover(x, y) {
+                const latLng = this.pixelToLatLng(x, y);
                 const cell = this.latLngToGridCell(latLng.lat, latLng.lng);
                 
-                if (!this.revealedCells.has(cell.key)) {
-                    // Оптимистичное обновление
-                    this.revealedCells.add(cell.key);
+                if (!this.hoverCell || this.hoverCell.key !== cell.key) {
+                    this.hoverCell = cell;
                     this.render();
-                    
-                    // Увеличиваем локальный счетчик
-                    let userCells = parseInt(localStorage.getItem('battlemap_userCells') || '0');
-                    userCells++;
-                    localStorage.setItem('battlemap_userCells', userCells);
-                    document.getElementById('userCells').textContent = userCells;
-                    
-                    try {
-                        const response = await fetch(`${API_BASE}/reveal-cell`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                cellKey: cell.key,
-                                userId: this.userId
-                            })
-                        });
-                        
-                        const result = await response.json();
-                        
-                        if (result.success) {
-                            this.showRevealAnimation(x, y);
-                            
-                            // Обновляем статистику через 1 секунду
-                            setTimeout(() => this.refreshStats(), 1000);
-                        } else if (result.reason === 'already_revealed') {
-                            // Клетка уже была раскрыта
-                            console.log('Cell already revealed');
-                        }
-                    } catch (error) {
-                        console.error('Failed to reveal cell:', error);
-                        // При ошибке оставляем клетку раскрытой локально
-                    }
                 }
             }
             
-            showRevealAnimation(x, y) {
-                const div = document.createElement('div');
-                div.className = 'reveal-animation';
-                div.style.left = x + 'px';
-                div.style.top = y + 'px';
-                div.style.width = '20px';
-                div.style.height = '20px';
-                div.style.borderRadius = '50%';
-                document.body.appendChild(div);
+            updateLocationInfo(x, y) {
+                const latLng = this.pixelToLatLng(x, y);
+                const location = `${latLng.lat.toFixed(4)}°, ${latLng.lng.toFixed(4)}°`;
+                document.getElementById('currentLocation').textContent = location;
+            }
+            
+            revealAt(x, y) {
+                const latLng = this.pixelToLatLng(x, y);
+                const cell = this.latLngToGridCell(latLng.lat, latLng.lng);
                 
-                setTimeout(() => div.remove(), 1000);
-            }
-            
-            async refreshStats() {
-                await this.loadWorldState();
-            }
-            
-            toggleGrid() {
-                this.showGrid = !this.showGrid;
-                this.render();
+                if (!this.revealedCells.has(cell.key)) {
+                    this.revealedCells.add(cell.key);
+                    this.updateStats();
+                    this.render();
+                    this.saveProgress();
+                }
             }
             
             render() {
@@ -637,8 +595,12 @@
                 this.fogCtx.clearRect(0, 0, this.fogCanvas.width, this.fogCanvas.height);
                 this.gridCtx.clearRect(0, 0, this.gridCanvas.width, this.gridCanvas.height);
                 
+                // Адаптивная прозрачность тумана в зависимости от зума
+                const zoom = this.map.getZoom();
+                const fogOpacity = zoom < 5 ? 0.9 : 0.85; // Более плотный туман при отдалении
+                
                 // Рисуем туман
-                this.fogCtx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+                this.fogCtx.fillStyle = `rgba(255, 255, 255, ${fogOpacity})`;
                 this.fogCtx.fillRect(0, 0, this.fogCanvas.width, this.fogCanvas.height);
                 
                 // Вырезаем раскрытые клетки
@@ -646,64 +608,185 @@
                 
                 this.revealedCells.forEach(cellKey => {
                     const [lat, lng] = cellKey.split(',').map(Number);
+                    
+                    // Используем фиксированный размер для согласованности с сеткой
                     const cellSize = this.CELL_SIZE_LAT;
                     
-                    const topLeft = this.map.latLngToContainerPoint([lat + cellSize, lng]);
-                    const bottomRight = this.map.latLngToContainerPoint([lat, lng + cellSize]);
+                    // Четыре угла клетки
+                    const topLeft = this.latLngToPixel(lat + cellSize, lng);
+                    const topRight = this.latLngToPixel(lat + cellSize, lng + cellSize);
+                    const bottomRight = this.latLngToPixel(lat, lng + cellSize);
+                    const bottomLeft = this.latLngToPixel(lat, lng);
                     
-                    this.fogCtx.fillRect(
-                        topLeft.x,
-                        topLeft.y,
-                        bottomRight.x - topLeft.x,
-                        bottomRight.y - topLeft.y
-                    );
+                    // Рисуем четырехугольник
+                    this.fogCtx.beginPath();
+                    this.fogCtx.moveTo(topLeft.x, topLeft.y);
+                    this.fogCtx.lineTo(topRight.x, topRight.y);
+                    this.fogCtx.lineTo(bottomRight.x, bottomRight.y);
+                    this.fogCtx.lineTo(bottomLeft.x, bottomLeft.y);
+                    this.fogCtx.closePath();
+                    this.fogCtx.fill();
                 });
                 
                 this.fogCtx.globalCompositeOperation = 'source-over';
                 
                 // Рисуем сетку
-                if (this.showGrid && this.map.getZoom() >= 7) {
+                if (this.showGrid) {
                     this.drawGrid();
+                }
+                
+                // Подсветка при наведении
+                if (this.hoverCell && !this.isDragging) {
+                    if (!this.revealedCells.has(this.hoverCell.key)) {
+                        const lat = this.hoverCell.lat;
+                        const lng = this.hoverCell.lng;
+                        const cellSize = this.CELL_SIZE_LAT;
+                        
+                        const topLeft = this.latLngToPixel(lat + cellSize, lng);
+                        const topRight = this.latLngToPixel(lat + cellSize, lng + cellSize);
+                        const bottomRight = this.latLngToPixel(lat, lng + cellSize);
+                        const bottomLeft = this.latLngToPixel(lat, lng);
+                        
+                        // Полупрозрачная заливка
+                        this.gridCtx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+                        this.gridCtx.beginPath();
+                        this.gridCtx.moveTo(topLeft.x, topLeft.y);
+                        this.gridCtx.lineTo(topRight.x, topRight.y);
+                        this.gridCtx.lineTo(bottomRight.x, bottomRight.y);
+                        this.gridCtx.lineTo(bottomLeft.x, bottomLeft.y);
+                        this.gridCtx.closePath();
+                        this.gridCtx.fill();
+                        
+                        // Рамка
+                        this.gridCtx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+                        this.gridCtx.lineWidth = 2;
+                        this.gridCtx.stroke();
+                    }
                 }
             }
             
             drawGrid() {
+                if (!this.map) return;
+                
+                // Скрываем сетку при малом зуме (когда клетки слишком мелкие)
+                const zoom = this.map.getZoom();
+                if (zoom < 7) return; // Не показываем сетку при зуме меньше 7
+                
                 const bounds = this.map.getBounds();
                 const cellSize = this.CELL_SIZE_LAT;
                 
-                const startLat = Math.floor(bounds.getSouth() / cellSize) * cellSize;
-                const endLat = Math.ceil(bounds.getNorth() / cellSize) * cellSize;
-                const startLng = Math.floor(bounds.getWest() / cellSize) * cellSize;
-                const endLng = Math.ceil(bounds.getEast() / cellSize) * cellSize;
+                // Ограничиваем количество линий
+                const maxLines = 100; // Максимум линий в каждом направлении
                 
-                this.gridCtx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
-                this.gridCtx.lineWidth = 0.5;
+                // Расширяем границы для рисования сетки за пределами видимой области
+                const startLat = Math.floor(bounds.getSouth() / cellSize) * cellSize - cellSize;
+                const endLat = Math.ceil(bounds.getNorth() / cellSize) * cellSize + cellSize;
+                const startLng = Math.floor(bounds.getWest() / cellSize) * cellSize - cellSize;
+                const endLng = Math.ceil(bounds.getEast() / cellSize) * cellSize + cellSize;
                 
+                // Проверяем количество линий
+                const latLines = Math.abs((endLat - startLat) / cellSize);
+                const lngLines = Math.abs((endLng - startLng) / cellSize);
+                
+                if (latLines > maxLines || lngLines > maxLines) return; // Слишком много линий
+                
+                // Адаптивная прозрачность в зависимости от зума
+                const opacity = Math.min(0.15, (zoom - 6) * 0.05);
+                this.gridCtx.strokeStyle = `rgba(0, 0, 0, ${opacity})`;
+                this.gridCtx.lineWidth = zoom > 10 ? 1 : 0.5;
+                
+                // Рисуем горизонтальные линии (параллели)
                 for (let lat = startLat; lat <= endLat; lat += cellSize) {
-                    const start = this.map.latLngToContainerPoint([lat, startLng]);
-                    const end = this.map.latLngToContainerPoint([lat, endLng]);
+                    const leftPoint = this.latLngToPixel(lat, startLng);
+                    const rightPoint = this.latLngToPixel(lat, endLng);
                     
                     this.gridCtx.beginPath();
-                    this.gridCtx.moveTo(start.x, start.y);
-                    this.gridCtx.lineTo(end.x, end.y);
+                    this.gridCtx.moveTo(leftPoint.x, leftPoint.y);
+                    this.gridCtx.lineTo(rightPoint.x, rightPoint.y);
                     this.gridCtx.stroke();
                 }
                 
+                // Рисуем вертикальные линии (меридианы) - теперь с тем же шагом
                 for (let lng = startLng; lng <= endLng; lng += cellSize) {
-                    const start = this.map.latLngToContainerPoint([startLat, lng]);
-                    const end = this.map.latLngToContainerPoint([endLat, lng]);
+                    const topPoint = this.latLngToPixel(endLat, lng);
+                    const bottomPoint = this.latLngToPixel(startLat, lng);
                     
                     this.gridCtx.beginPath();
-                    this.gridCtx.moveTo(start.x, start.y);
-                    this.gridCtx.lineTo(end.x, end.y);
+                    this.gridCtx.moveTo(topPoint.x, topPoint.y);
+                    this.gridCtx.lineTo(bottomPoint.x, bottomPoint.y);
                     this.gridCtx.stroke();
+                }
+            }
+            
+            toggleGrid() {
+                this.showGrid = !this.showGrid;
+                this.render();
+            }
+            
+            updateStats() {
+                const cellsCount = this.revealedCells.size;
+                const totalArea = cellsCount * this.CELL_SIZE_KM * this.CELL_SIZE_KM;
+                
+                document.getElementById('cellsRevealed').textContent = cellsCount.toLocaleString();
+                document.getElementById('areaRevealed').textContent = Math.round(totalArea).toLocaleString();
+            }
+            
+            updateUI() {
+                const zoom = this.currentZoom;
+                document.getElementById('zoomLevel').textContent = zoom;
+                document.getElementById('cellSize').textContent = `${this.CELL_SIZE_KM} км`;
+                
+                // Обновляем информацию о видимости сетки
+                const gridInfo = document.querySelector('.info-panel div:last-child');
+                if (zoom < 7) {
+                    gridInfo.innerHTML = '📐 Сетка: скрыта (приблизьте)';
+                    gridInfo.style.opacity = '0.5';
+                } else {
+                    gridInfo.innerHTML = '📐 Сетка: 10×10 км';
+                    gridInfo.style.opacity = '1';
+                }
+            }
+            
+            resetFog() {
+                if (confirm('Очистить весь прогресс?')) {
+                    this.revealedCells.clear();
+                    this.updateStats();
+                    this.render();
+                    this.saveProgress();
+                }
+            }
+            
+            saveProgress() {
+                const data = {
+                    cells: Array.from(this.revealedCells),
+                    center: this.map.getCenter(),
+                    zoom: this.map.getZoom()
+                };
+                localStorage.setItem('battleMapFixedGrid', JSON.stringify(data));
+            }
+            
+            loadProgress() {
+                const saved = localStorage.getItem('battleMapFixedGrid');
+                if (saved) {
+                    try {
+                        const data = JSON.parse(saved);
+                        this.revealedCells = new Set(data.cells);
+                        if (data.center) {
+                            this.map.setView([data.center.lat, data.center.lng], data.zoom || 10);
+                        }
+                        this.updateStats();
+                        this.updateUI();
+                        this.render();
+                    } catch (e) {
+                        console.error('Ошибка загрузки прогресса:', e);
+                    }
                 }
             }
         }
         
         // Инициализация
         document.addEventListener('DOMContentLoaded', () => {
-            window.battleMap = new OnlineBattleMap();
+            window.battleMap = new FixedGridBattleMap();
         });
     </script>
 </body>
