@@ -1017,9 +1017,24 @@
                 countries.forEach((country, index) => {
                     const item = document.createElement('div');
                     item.className = 'country-item';
+                    
+                    // Форматируем процент для отображения
+                    let displayText = '';
+                    if (country.percentage > 0) {
+                        if (country.percentage < 0.01) {
+                            displayText = `${country.cells} (< 0.01%)`;
+                        } else if (country.percentage < 1) {
+                            displayText = `${country.cells} (${country.percentage.toFixed(2)}%)`;
+                        } else {
+                            displayText = `${country.cells} (${country.percentage.toFixed(1)}%)`;
+                        }
+                    } else {
+                        displayText = `${country.cells || 0}`;
+                    }
+                    
                     item.innerHTML = `
                         <span>${index + 1}. ${country.name}</span>
-                        <span class="country-cells">${country.cells}</span>
+                        <span class="country-cells">${displayText}</span>
                     `;
                     list.appendChild(item);
                 });
