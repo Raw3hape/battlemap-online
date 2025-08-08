@@ -28,8 +28,8 @@ class GoogleMapsBattleMap {
         // Батчинг
         this.pendingReveals = new Set();
         this.batchTimer = null;
-        this.batchDelay = 500;
-        this.maxBatchSize = 10;
+        this.batchDelay = 2000; // Увеличено до 2 секунд
+        this.maxBatchSize = 25; // Увеличен размер батча
         
         // Rate limiting  
         this.lastRevealTime = 0;
@@ -42,8 +42,9 @@ class GoogleMapsBattleMap {
         
         // Синхронизация
         this.syncInterval = null;
-        this.syncDelay = 20000;
+        this.syncDelay = 60000; // Увеличено до 60 секунд для экономии Redis
         this.isSyncing = false;
+        this.lastActivity = Date.now();
         
         // Тема
         this.theme = localStorage.getItem('battleMapTheme') || 'dark';
@@ -289,6 +290,9 @@ class GoogleMapsBattleMap {
     
     // ======= РАСКРЫТИЕ КЛЕТОК =======
     handleReveal(x, y) {
+        // Обновляем активность
+        this.lastActivity = Date.now();
+        
         // Проверка cooldown
         const now = Date.now();
         if (now - this.lastRevealTime < this.revealCooldown) {
@@ -506,6 +510,13 @@ class GoogleMapsBattleMap {
     
     async syncWithServer() {
         if (this.isSyncing) return;
+        
+        // Пропускаем синхронизацию если нет активности больше 5 минут
+        if (Date.now() - this.lastActivity > 300000) {
+            console.log('Пропуск синхронизации - нет активности');
+            return;
+        }
+        
         this.isSyncing = true;
         
         const syncStatus = document.getElementById('syncStatus');
