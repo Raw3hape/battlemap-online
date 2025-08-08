@@ -54,9 +54,13 @@ class BattleMap {
     
     init() {
         this.setupMap();
-        this.setupFog();
-        this.setupEventListeners();
-        this.updateStats();
+        // Ждем полной инициализации карты
+        this.map.whenReady(() => {
+            this.setupFog();
+            this.setupEventListeners();
+            this.loadProgress();
+            this.updateStats();
+        });
     }
     
     setupMap() {
@@ -91,16 +95,21 @@ class BattleMap {
         document.getElementById('map').appendChild(this.fogCanvas);
         
         // Обновляем туман при изменении карты
-        this.map.on('moveend zoomend', () => this.updateFog());
+        this.map.on('moveend', () => this.updateFog());
+        this.map.on('zoomend', () => this.updateFog());
         this.map.on('resize', () => this.updateFog());
     }
     
     setupFog() {
         // Начальное состояние - вся карта покрыта туманом
-        this.updateFog();
+        if (this.map) {
+            this.updateFog();
+        }
     }
     
     updateFog() {
+        if (!this.map) return;
+        
         const size = this.map.getSize();
         this.fogCanvas.width = size.x;
         this.fogCanvas.height = size.y;
@@ -117,22 +126,26 @@ class BattleMap {
         ctx.globalCompositeOperation = 'destination-out';
         
         this.revealedAreas.forEach(circle => {
-            const bounds = circle.getBounds();
-            const ne = this.map.latLngToContainerPoint(bounds.getNorthEast());
-            const sw = this.map.latLngToContainerPoint(bounds.getSouthWest());
-            const center = this.map.latLngToContainerPoint(circle.getLatLng());
-            const radius = Math.abs(ne.x - sw.x) / 2;
+            try {
+                const bounds = circle.getBounds();
+                const ne = this.map.latLngToContainerPoint(bounds.getNorthEast());
+                const sw = this.map.latLngToContainerPoint(bounds.getSouthWest());
+                const center = this.map.latLngToContainerPoint(circle.getLatLng());
+                const radius = Math.abs(ne.x - sw.x) / 2;
             
-            // Создаем градиент для плавного раскрытия
-            const gradient = ctx.createRadialGradient(center.x, center.y, 0, center.x, center.y, radius);
-            gradient.addColorStop(0, 'rgba(0, 0, 0, 1)');
-            gradient.addColorStop(0.7, 'rgba(0, 0, 0, 0.8)');
-            gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                // Создаем градиент для плавного раскрытия
+                const gradient = ctx.createRadialGradient(center.x, center.y, 0, center.x, center.y, radius);
+                gradient.addColorStop(0, 'rgba(0, 0, 0, 1)');
+                gradient.addColorStop(0.7, 'rgba(0, 0, 0, 0.8)');
+                gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
             
-            ctx.fillStyle = gradient;
-            ctx.beginPath();
-            ctx.arc(center.x, center.y, radius, 0, Math.PI * 2);
-            ctx.fill();
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(center.x, center.y, radius, 0, Math.PI * 2);
+                ctx.fill();
+            } catch (e) {
+                console.warn('Error updating fog for circle:', e);
+            }
         });
         
         ctx.globalCompositeOperation = 'source-over';
@@ -164,6 +177,9 @@ class BattleMap {
             fillOpacity: 0,
             opacity: 0
         });
+        
+        // Добавляем круг на карту (невидимый)
+        circle.addTo(this.map);
         
         this.revealedAreas.push(circle);
         this.updateFog();
