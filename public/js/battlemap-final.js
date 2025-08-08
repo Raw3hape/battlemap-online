@@ -36,7 +36,7 @@ class FinalBattleMap {
         
         // Rate limiting
         this.clickTimestamps = [];
-        this.maxClicksPerSecond = 15;
+        this.maxClicksPerSecond = 5; // Уменьшено до 5 кликов/сек
         this.rateLimitWarned = false;
         
         // Оптимизация рендеринга
@@ -85,6 +85,16 @@ class FinalBattleMap {
             this.render();
             this.startOnlineSync();
             this.startStatsMonitoring();
+            
+            // Устанавливаем начальные значения UI
+            const themeStatus = document.getElementById('themeStatus');
+            if (themeStatus) {
+                themeStatus.textContent = this.theme === 'dark' ? 'Темная' : 'Светлая';
+            }
+            const gridStatus = document.getElementById('gridStatus');
+            if (gridStatus) {
+                gridStatus.textContent = this.showGrid ? 'ON' : 'OFF';
+            }
         });
         
         this.log('BattleMap инициализирован (финальная версия)', 'info');
@@ -529,6 +539,9 @@ class FinalBattleMap {
         this.map = L.map('map', {
             center: [55.7558, 37.6173], // Москва
             zoom: 5,
+            minZoom: 3, // Ограничение минимального зума
+            maxBounds: [[-85, -180], [85, 180]], // Ограничение границ карты
+            maxBoundsViscosity: 1.0, // Жесткое ограничение
             zoomControl: false,
             attributionControl: false
         });
@@ -583,7 +596,7 @@ class FinalBattleMap {
         
         this.tileLayer = L.tileLayer(tileUrl, {
             maxZoom: maxZoom,
-            minZoom: 2,
+            minZoom: 3, // Совпадает с ограничением карты
             attribution: attribution
         }).addTo(this.map);
         
@@ -607,9 +620,11 @@ class FinalBattleMap {
     }
     
     updateStats() {
-        const area = this.revealedCells.size * 100; // 10km × 10km = 100km²
-        document.getElementById('areaRevealed').textContent = area.toLocaleString();
-        document.getElementById('cellsRevealed').textContent = this.revealedCells.size.toLocaleString();
+        // Показываем локальную статистику пользователя (не общую)
+        const localArea = this.revealedCells.size * 100; // 10km × 10km = 100km²
+        const localCells = this.revealedCells.size;
+        document.getElementById('areaRevealed').textContent = localArea.toLocaleString();
+        document.getElementById('cellsRevealed').textContent = localCells.toLocaleString();
     }
     
     updateOnlineStats(data) {
@@ -655,9 +670,10 @@ class FinalBattleMap {
     toggleTheme() {
         const newTheme = this.theme === 'dark' ? 'light' : 'dark';
         this.applyTheme(newTheme);
-        const icon = document.getElementById('themeToggle');
-        if (icon) {
-            icon.textContent = newTheme === 'dark' ? '🌙' : '☀️';
+        // Обновляем статус в меню
+        const themeStatus = document.getElementById('themeStatus');
+        if (themeStatus) {
+            themeStatus.textContent = newTheme === 'dark' ? 'Темная' : 'Светлая';
         }
         this.log(`Тема изменена на ${newTheme}`, 'info');
     }
@@ -737,6 +753,11 @@ class FinalBattleMap {
     toggleGrid() {
         this.showGrid = !this.showGrid;
         this.scheduleRender();
+        // Обновляем статус в меню
+        const gridStatus = document.getElementById('gridStatus');
+        if (gridStatus) {
+            gridStatus.textContent = this.showGrid ? 'ON' : 'OFF';
+        }
         this.log(`Сетка ${this.showGrid ? 'включена' : 'выключена'}`, 'info');
     }
     

@@ -336,29 +336,9 @@ input, select, textarea {
     transform: scale(0.95);
 }
 
-/* Селектор стиля карты */
+/* Селектор стиля карты - теперь в меню */
 .map-style-selector {
-    position: fixed;
-    bottom: 30px;
-    left: 20px;
-    background: var(--panel-bg);
-    backdrop-filter: blur(10px);
-    border-radius: 12px;
-    padding: 10px;
-    border: 1px solid var(--panel-border);
-    z-index: 1000;
-    pointer-events: auto;
-}
-
-.map-style-selector select {
-    background: var(--button-bg);
-    color: var(--text-color);
-    border: 1px solid var(--panel-border);
-    padding: 8px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 14px;
-    min-width: 200px;
+    display: none !important;
 }
 
 /* Онлайн статистика */
@@ -472,30 +452,9 @@ input, select, textarea {
     transform: translate(-50%, -50%) scale(1);
 }
 
-/* Переключатель темы */
+/* Переключатель темы - теперь в меню */
 .theme-toggle {
-    position: fixed;
-    top: 20px;
-    right: 70px;
-    width: 40px;
-    height: 40px;
-    background: var(--panel-bg);
-    backdrop-filter: blur(10px);
-    border-radius: 10px;
-    border: 1px solid var(--panel-border);
-    color: var(--text-color);
-    font-size: 18px;
-    cursor: pointer;
-    z-index: 11;
-    pointer-events: auto;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s ease;
-}
-
-.theme-toggle:active {
-    transform: scale(0.95);
+    display: none !important;
 }
 
 /* Мобильная адаптация */

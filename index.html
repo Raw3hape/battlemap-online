@@ -29,9 +29,6 @@
     <!-- Кнопка меню -->
     <button class="menu-button" onclick="window.battleMap && window.battleMap.toggleMenu()">☰</button>
     
-    <!-- Переключатель темы -->
-    <button class="theme-toggle" onclick="window.battleMap && window.battleMap.toggleTheme()" id="themeToggle">🌙</button>
-    
     <!-- Боковое меню -->
     <div class="side-menu" id="sideMenu">
         <div class="menu-header">
@@ -40,12 +37,34 @@
         </div>
         
         <div class="menu-section">
+            <h3>Настройки</h3>
+            <div class="menu-item" onclick="window.battleMap && window.battleMap.toggleTheme()">
+                <span>🎨 Тема</span>
+                <span id="themeStatus">Темная</span>
+            </div>
+            <div class="menu-item">
+                <span>🗺️ Стиль карты</span>
+                <select id="mapStyleMenu" onchange="window.battleMap && window.battleMap.changeMapStyle(this.value)" style="background: transparent; color: inherit; border: none; font-size: 12px;">
+                    <option value="osm">OpenStreetMap</option>
+                    <option value="hot">OSM HOT</option>
+                    <option value="topo">Топографическая</option>
+                    <option value="cycle">Велосипедная</option>
+                    <option value="positron">CartoDB Light</option>
+                    <option value="dark">CartoDB Dark</option>
+                    <option value="satellite">Спутник</option>
+                    <option value="wikimedia">Wikimedia</option>
+                </select>
+            </div>
+            <div class="menu-item" onclick="window.battleMap && window.battleMap.toggleGrid()">
+                <span>⊞ Сетка</span>
+                <span id="gridStatus">ON</span>
+            </div>
+        </div>
+        
+        <div class="menu-section">
             <h3>Управление</h3>
             <div class="menu-item" onclick="window.battleMap && window.battleMap.resetFog()">
                 <span>↺ Сбросить прогресс</span>
-            </div>
-            <div class="menu-item" onclick="window.battleMap && window.battleMap.toggleGrid()">
-                <span>⊞ Переключить сетку</span>
             </div>
             <div class="menu-item" onclick="window.battleMap && window.battleMap.saveProgress()">
                 <span>💾 Сохранить</span>
@@ -96,42 +115,29 @@
         <div class="logs-content" id="logsContent"></div>
     </div>
     
-    <!-- Селектор стиля карты -->
-    <div class="map-style-selector">
-        <select id="mapStyle" onchange="window.battleMap && window.battleMap.changeMapStyle(this.value)">
-            <option value="osm">OpenStreetMap</option>
-            <option value="hot">OSM HOT</option>
-            <option value="topo">Топографическая</option>
-            <option value="cycle">Велосипедная</option>
-            <option value="positron">CartoDB Light</option>
-            <option value="dark">CartoDB Dark</option>
-            <option value="satellite">Спутник</option>
-            <option value="wikimedia">Wikimedia</option>
-        </select>
-    </div>
     
     <!-- UI контейнер -->
     <div class="ui-container">
-        <!-- Основная статистика -->
+        <!-- Локальная статистика игрока -->
         <div class="stats">
             <div class="stat-item">
-                <span class="stat-label">км²</span>
+                <span class="stat-label">Мои км²</span>
                 <span class="stat-value" id="areaRevealed">0</span>
             </div>
             <div class="stat-item">
-                <span class="stat-label">Клеток</span>
+                <span class="stat-label">Мои клетки</span>
                 <span class="stat-value" id="cellsRevealed">0</span>
             </div>
         </div>
         
-        <!-- Онлайн статистика -->
+        <!-- Общая онлайн статистика -->
         <div class="online-stats">
             <div class="online-stat-item">
-                <span class="online-stat-label">Всего</span>
+                <span class="online-stat-label">Всего клеток</span>
                 <span class="online-stat-value" id="totalCells">0</span>
             </div>
             <div class="online-stat-item">
-                <span class="online-stat-label">Онлайн</span>
+                <span class="online-stat-label">Игроков</span>
                 <span class="online-stat-value" id="onlinePlayers">1</span>
             </div>
         </div>
@@ -158,23 +164,6 @@
     <script src="/public/js/battlemap-final.js"></script>
     
     <script>
-        // Обновление иконки темы
-        document.addEventListener('DOMContentLoaded', () => {
-            const updateThemeIcon = () => {
-                const theme = document.body.getAttribute('data-theme');
-                const icon = document.getElementById('themeToggle');
-                if (icon) {
-                    icon.textContent = theme === 'dark' ? '🌙' : '☀️';
-                }
-            };
-            
-            // Наблюдатель за изменением темы
-            const observer = new MutationObserver(updateThemeIcon);
-            observer.observe(document.body, { attributes: true, attributeFilter: ['data-theme'] });
-            
-            updateThemeIcon();
-        });
-        
         // Предотвращение случайного зума на iOS
         document.addEventListener('touchmove', function(e) {
             if (e.scale !== 1) {
