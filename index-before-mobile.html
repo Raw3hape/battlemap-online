@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>BattleMap Online - Играй с друзьями</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗺️</text></svg>">
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- Наши стили -->
+    <link rel="stylesheet" href="/public/css/main.css">
+</head>
+<body>
+    <!-- Карта и канвасы -->
+    <div id="map"></div>
+    <canvas id="fogCanvas"></canvas>
+    <canvas id="gridCanvas"></canvas>
+    
+    <!-- Селектор стиля карты -->
+    <div class="map-style-selector">
+        <select id="mapStyle" onchange="window.battleMap && window.battleMap.changeMapStyle(this.value)">
+            <option value="osm">OpenStreetMap Standard</option>
+            <option value="hot">OpenStreetMap HOT</option>
+            <option value="topo">OpenTopoMap (топографическая)</option>
+            <option value="cycle">CyclOSM (для велосипедистов)</option>
+            <option value="positron">CartoDB Positron (светлая)</option>
+            <option value="dark">CartoDB Dark Matter (тёмная)</option>
+            <option value="satellite">ESRI World Imagery (спутник)</option>
+            <option value="wikimedia">Wikimedia Maps</option>
+        </select>
+    </div>
+    
+    <!-- UI контейнер -->
+    <div class="ui-container">
+        <div class="header">
+            <h1>BattleMap Online</h1>
+            <p class="subtitle">Раскрой реальную карту мира вместе!</p>
+            <p style="font-size: 11px; opacity: 0.5; margin-top: 8px;">
+                ЛКМ - раскрыть | Shift+ЛКМ или ПКМ - перетащить | Колесо - зум
+            </p>
+        </div>
+        
+        <div class="stats">
+            <div class="stat-item">
+                <span class="stat-label">Раскрыто км²</span>
+                <span class="stat-value" id="areaRevealed">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Клеток</span>
+                <span class="stat-value" id="cellsRevealed">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Размер клетки</span>
+                <span class="stat-value" id="cellSize">10 км</span>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button class="control-btn" onclick="window.battleMap && window.battleMap.resetFog()">↺</button>
+            <button class="control-btn" onclick="window.battleMap && window.battleMap.toggleGrid()">⊞</button>
+            <button class="control-btn" onclick="window.battleMap && window.battleMap.saveProgress()">💾</button>
+            <button class="control-btn" onclick="window.battleMap && window.battleMap.loadProgress()">📂</button>
+        </div>
+        
+        <div class="info-panel">
+            <div style="margin-bottom: 8px;">📍 <span id="currentLocation">-</span></div>
+            <div style="margin-bottom: 8px;">🌍 Зум: <span id="zoomLevel">5</span></div>
+            <div>📐 Сетка: 10×10 км</div>
+        </div>
+        
+        <div class="online-stats">
+            <div class="online-stat-item">
+                <span class="online-stat-label">🌍 Всего раскрыто</span>
+                <span class="online-stat-value" id="totalCells">0</span>
+            </div>
+            <div class="online-stat-item">
+                <span class="online-stat-label">👥 Игроков онлайн</span>
+                <span class="online-stat-value" id="onlinePlayers">1</span>
+            </div>
+        </div>
+        
+        <div class="top-countries" id="topCountries">
+            <h3>🏆 Топ стран</h3>
+            <div id="countriesList"></div>
+        </div>
+    </div>
+    
+    <div class="sync-status" id="syncStatus">Синхронизация...</div>
+    
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Наш код -->
+    <script src="/public/js/battlemap.js"></script>
+</body>
+</html>
