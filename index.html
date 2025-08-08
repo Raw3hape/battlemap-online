@@ -1018,23 +1018,25 @@
                     const item = document.createElement('div');
                     item.className = 'country-item';
                     
-                    // Форматируем процент для отображения
-                    let displayText = '';
+                    // Форматируем отображение с клетками и процентом
+                    let cellsText = country.cells || 0;
+                    let percentText = '';
+                    
                     if (country.percentage > 0) {
                         if (country.percentage < 0.01) {
-                            displayText = `${country.cells} (< 0.01%)`;
+                            percentText = '< 0.01%';
                         } else if (country.percentage < 1) {
-                            displayText = `${country.cells} (${country.percentage.toFixed(2)}%)`;
+                            percentText = `${country.percentage.toFixed(2)}%`;
                         } else {
-                            displayText = `${country.cells} (${country.percentage.toFixed(1)}%)`;
+                            percentText = `${country.percentage.toFixed(1)}%`;
                         }
                     } else {
-                        displayText = `${country.cells || 0}`;
+                        percentText = '0.00%';
                     }
                     
                     item.innerHTML = `
                         <span>${index + 1}. ${country.name}</span>
-                        <span class="country-cells">${displayText}</span>
+                        <span class="country-cells">${cellsText} клеток (${percentText})</span>
                     `;
                     list.appendChild(item);
                 });
