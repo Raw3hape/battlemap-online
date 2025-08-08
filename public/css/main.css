@@ -593,7 +593,9 @@ input, select, textarea {
 }
 
 .leaflet-control-zoom {
-    display: none;
+    display: block;
+    bottom: 30px !important;
+    right: 20px !important;
 }
 
 .leaflet-control-attribution {
