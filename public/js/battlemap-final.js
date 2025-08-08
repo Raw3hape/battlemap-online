@@ -1,5 +1,5 @@
-// BattleMap Online - Оптимизированная версия с защитой от спама
-class OptimizedBattleMap {
+// BattleMap Online - Финальная оптимизированная версия
+class FinalBattleMap {
     constructor() {
         this.map = null;
         this.fogCanvas = document.getElementById('fogCanvas');
@@ -19,40 +19,32 @@ class OptimizedBattleMap {
         this.dragStartX = 0;
         this.dragStartY = 0;
         this.currentZoom = 5;
-        this.hoverCell = null;
         
         // ID игрока
         this.playerId = this.getOrCreatePlayerId();
         
         // ======= ОПТИМИЗАЦИИ =======
         // Батчинг запросов
-        this.pendingReveals = new Set(); // Клетки для отправки
+        this.pendingReveals = new Set();
         this.batchTimer = null;
-        this.batchDelay = 300; // Отправка батча каждые 300мс
-        this.maxBatchSize = 25; // Максимум клеток в батче
+        this.batchDelay = 300; // 300мс
+        this.maxBatchSize = 25;
         
         // Throttling кликов
         this.lastRevealTime = 0;
-        this.revealThrottle = 50; // Минимум 50мс между обработкой кликов
+        this.revealThrottle = 50; // 50мс между кликами
         
         // Rate limiting
         this.clickTimestamps = [];
-        this.maxClicksPerSecond = 15; // Максимум 15 кликов в секунду
+        this.maxClicksPerSecond = 15;
         this.rateLimitWarned = false;
         
         // Оптимизация рендеринга
         this.renderThrottle = null;
-        this.renderDelay = 16; // 60 FPS максимум
-        this.needsRender = false;
-        
-        // Viewport-based loading
-        this.visibleBounds = null;
-        this.viewportCache = new Map(); // Кэш видимых областей
-        this.viewportCacheSize = 1000; // Максимум клеток в кэше
         
         // Синхронизация (15 секунд)
         this.syncInterval = null;
-        this.syncDelay = 15000; // 15 секунд
+        this.syncDelay = 15000;
         this.lastSync = 0;
         this.isSyncing = false;
         
@@ -95,17 +87,14 @@ class OptimizedBattleMap {
             this.startStatsMonitoring();
         });
         
-        this.log('BattleMap инициализирован (оптимизированная версия)', 'info');
+        this.log('BattleMap инициализирован (финальная версия)', 'info');
     }
     
     // ======= ЗАЩИТА ОТ СПАМА =======
     checkRateLimit() {
         const now = Date.now();
-        
-        // Удаляем старые метки времени (старше 1 секунды)
         this.clickTimestamps = this.clickTimestamps.filter(t => now - t < 1000);
         
-        // Проверяем лимит
         if (this.clickTimestamps.length >= this.maxClicksPerSecond) {
             this.stats.rateLimitHits++;
             
@@ -123,17 +112,14 @@ class OptimizedBattleMap {
         return true;
     }
     
-    // ======= THROTTLING =======
     canReveal() {
         const now = Date.now();
         
-        // Проверка throttle
         if (now - this.lastRevealTime < this.revealThrottle) {
             this.stats.throttledClicks++;
             return false;
         }
         
-        // Проверка rate limit
         if (!this.checkRateLimit()) {
             return false;
         }
@@ -144,21 +130,17 @@ class OptimizedBattleMap {
     
     // ======= БАТЧИНГ ЗАПРОСОВ =======
     addToBatch(cellKey) {
-        // Проверяем, не в батче ли уже
         if (this.pendingReveals.has(cellKey)) {
             return;
         }
         
-        // Добавляем в батч
         this.pendingReveals.add(cellKey);
         
-        // Если батч полный, отправляем сразу
         if (this.pendingReveals.size >= this.maxBatchSize) {
             this.flushBatch();
             return;
         }
         
-        // Иначе запускаем таймер
         if (!this.batchTimer) {
             this.batchTimer = setTimeout(() => this.flushBatch(), this.batchDelay);
         }
@@ -169,11 +151,9 @@ class OptimizedBattleMap {
             return;
         }
         
-        // Копируем батч и очищаем
         const batch = Array.from(this.pendingReveals);
         this.pendingReveals.clear();
         
-        // Сбрасываем таймер
         if (this.batchTimer) {
             clearTimeout(this.batchTimer);
             this.batchTimer = null;
@@ -183,7 +163,6 @@ class OptimizedBattleMap {
         this.log(`Отправка батча: ${batch.length} клеток`, 'debug');
         
         try {
-            // Отправляем батч на сервер
             const response = await fetch('/api/reveal-batch', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -197,65 +176,45 @@ class OptimizedBattleMap {
             if (response.ok) {
                 const data = await response.json();
                 
-                // Обновляем локальное состояние
                 batch.forEach(cell => {
                     this.revealedCells.add(cell);
                     this.stats.revealedThisSession++;
                 });
                 
-                // Обновляем статистику
                 if (data.totalRevealed) {
                     document.getElementById('totalCells').textContent = data.totalRevealed.toLocaleString();
                 }
                 
+                if (data.onlinePlayers) {
+                    document.getElementById('onlinePlayers').textContent = data.onlinePlayers;
+                }
+                
+                this.updateStats();
+                this.scheduleRender();
+            } else {
+                // При ошибке все равно отображаем локально
+                this.log(`Ошибка батча: ${response.status}`, 'error');
+                batch.forEach(cell => {
+                    this.revealedCells.add(cell);
+                    this.stats.revealedThisSession++;
+                });
+                this.updateStats();
                 this.scheduleRender();
             }
         } catch (error) {
             this.log(`Ошибка отправки батча: ${error.message}`, 'error');
-            
-            // Возвращаем клетки в очередь при ошибке
-            batch.forEach(cell => this.pendingReveals.add(cell));
+            // При ошибке отображаем локально
+            batch.forEach(cell => {
+                this.revealedCells.add(cell);
+                this.stats.revealedThisSession++;
+            });
+            this.updateStats();
+            this.scheduleRender();
         }
     }
     
-    // ======= VIEWPORT LOADING =======
-    updateViewport() {
-        const bounds = this.map.getBounds();
-        const zoom = this.map.getZoom();
-        
-        // Кэшируем только при высоком зуме
-        if (zoom < 10) {
-            this.visibleBounds = null;
-            return;
-        }
-        
-        this.visibleBounds = {
-            north: bounds.getNorth(),
-            south: bounds.getSouth(),
-            east: bounds.getEast(),
-            west: bounds.getWest()
-        };
-        
-        // Очищаем старый кэш если слишком большой
-        if (this.viewportCache.size > this.viewportCacheSize) {
-            const toDelete = this.viewportCache.size - this.viewportCacheSize / 2;
-            const keys = Array.from(this.viewportCache.keys()).slice(0, toDelete);
-            keys.forEach(key => this.viewportCache.delete(key));
-        }
-    }
-    
-    isInViewport(lat, lng) {
-        if (!this.visibleBounds) return true;
-        
-        return lat >= this.visibleBounds.south && 
-               lat <= this.visibleBounds.north &&
-               lng >= this.visibleBounds.west && 
-               lng <= this.visibleBounds.east;
-    }
-    
-    // ======= ОПТИМИЗИРОВАННОЕ РАСКРЫТИЕ =======
+    // ======= РАСКРЫТИЕ КЛЕТОК =======
     revealAt(x, y) {
-        // Проверка throttling и rate limit
         if (!this.canReveal()) {
             return;
         }
@@ -267,27 +226,20 @@ class OptimizedBattleMap {
         const cellLng = Math.floor(latLng.lng / this.CELL_SIZE_LAT) * this.CELL_SIZE_LAT;
         const cellKey = `${cellLat.toFixed(4)},${cellLng.toFixed(4)}`;
         
-        // Проверяем, не раскрыта ли уже
         if (this.revealedCells.has(cellKey)) {
             return;
         }
         
-        // Проверяем viewport (только при высоком зуме)
-        if (this.currentZoom >= 10 && !this.isInViewport(cellLat, cellLng)) {
-            this.log('Клик вне видимой области', 'debug');
-            return;
-        }
-        
-        // Добавляем в батч вместо мгновенной отправки
+        // Добавляем в батч
         this.addToBatch(cellKey);
         
-        // Обновляем UI сразу для отзывчивости
+        // Сразу отображаем локально для отзывчивости
         this.revealedCells.add(cellKey);
         this.updateStats();
         this.scheduleRender();
     }
     
-    // ======= ОПТИМИЗИРОВАННЫЙ РЕНДЕРИНГ =======
+    // ======= РЕНДЕРИНГ =======
     scheduleRender() {
         if (this.renderThrottle) return;
         
@@ -299,20 +251,18 @@ class OptimizedBattleMap {
     
     render() {
         const bounds = this.map.getBounds();
-        const topLeft = this.map.latLngToContainerPoint(bounds.getNorthWest());
-        const bottomRight = this.map.latLngToContainerPoint(bounds.getSouthEast());
         
         // Очищаем канвасы
         this.fogCtx.clearRect(0, 0, this.fogCanvas.width, this.fogCanvas.height);
         this.gridCtx.clearRect(0, 0, this.gridCanvas.width, this.gridCanvas.height);
         
-        // Оптимизация: рендерим только видимую область
+        // Рендерим только видимую область
         const startLat = Math.floor(bounds.getSouth() / this.CELL_SIZE_LAT) * this.CELL_SIZE_LAT;
         const endLat = Math.ceil(bounds.getNorth() / this.CELL_SIZE_LAT) * this.CELL_SIZE_LAT;
         const startLng = Math.floor(bounds.getWest() / this.CELL_SIZE_LAT) * this.CELL_SIZE_LAT;
         const endLng = Math.ceil(bounds.getEast() / this.CELL_SIZE_LAT) * this.CELL_SIZE_LAT;
         
-        // Настройки тумана в зависимости от темы
+        // Настройки тумана
         const fogColor = this.theme === 'dark' ? 
             'rgba(255, 255, 255, 0.85)' : 
             'rgba(0, 0, 0, 0.3)';
@@ -325,7 +275,7 @@ class OptimizedBattleMap {
             for (let lng = startLng; lng <= endLng; lng += this.CELL_SIZE_LAT) {
                 const cellKey = `${lat.toFixed(4)},${lng.toFixed(4)}`;
                 
-                if (!this.revealedCells.has(cellKey) && !this.pendingReveals.has(cellKey)) {
+                if (!this.revealedCells.has(cellKey)) {
                     const nw = this.map.latLngToContainerPoint([lat + this.CELL_SIZE_LAT, lng]);
                     const se = this.map.latLngToContainerPoint([lat, lng + this.CELL_SIZE_LAT]);
                     
@@ -341,7 +291,7 @@ class OptimizedBattleMap {
         
         this.fogCtx.fill();
         
-        // Рисуем сетку если включена
+        // Рисуем сетку
         if (this.showGrid && this.currentZoom >= 10) {
             this.drawGrid(startLat, endLat, startLng, endLng);
         }
@@ -374,10 +324,8 @@ class OptimizedBattleMap {
     
     // ======= СИНХРОНИЗАЦИЯ (15 секунд) =======
     startOnlineSync() {
-        // Первая синхронизация сразу
         this.syncWithServer();
         
-        // Затем каждые 15 секунд
         this.syncInterval = setInterval(() => {
             this.syncWithServer();
         }, this.syncDelay);
@@ -397,16 +345,16 @@ class OptimizedBattleMap {
         try {
             syncStatus?.classList.add('show');
             
-            // Получаем только изменения с последней синхронизации
-            const response = await fetch(`/api/game-state?since=${this.lastSync}&viewport=${this.getViewportString()}`);
+            const response = await fetch('/api/game-state');
             
             if (response.ok) {
                 const data = await response.json();
                 
-                // Обновляем только новые клетки
-                if (data.cells && Array.isArray(data.cells)) {
+                // Обновляем клетки (поддержка обоих форматов API)
+                const cells = data.allCells || data.cells || [];
+                if (Array.isArray(cells)) {
                     let newCells = 0;
-                    data.cells.forEach(cell => {
+                    cells.forEach(cell => {
                         if (!this.revealedCells.has(cell)) {
                             this.revealedCells.add(cell);
                             newCells++;
@@ -432,37 +380,27 @@ class OptimizedBattleMap {
         }
     }
     
-    getViewportString() {
-        if (!this.visibleBounds) return '';
-        
-        return `${this.visibleBounds.north.toFixed(2)},${this.visibleBounds.south.toFixed(2)},${this.visibleBounds.east.toFixed(2)},${this.visibleBounds.west.toFixed(2)}`;
-    }
-    
-    // ======= МОНИТОРИНГ СТАТИСТИКИ =======
+    // ======= МОНИТОРИНГ =======
     startStatsMonitoring() {
         setInterval(() => {
-            // Подсчет кликов в секунду
             const now = Date.now();
             this.stats.clicksPerSecond = this.clickTimestamps.filter(t => now - t < 1000).length;
             
-            // Отображение в UI если есть debug панель
             if (this.logLevel === 'debug') {
-                this.log(`Статистика: ${this.stats.clicksPerSecond} кликов/сек, ${this.stats.throttledClicks} заблокировано, ${this.stats.batchesSent} батчей отправлено`, 'debug');
+                this.log(`Статистика: ${this.stats.clicksPerSecond} кликов/сек, ${this.stats.throttledClicks} заблокировано, ${this.stats.batchesSent} батчей`, 'debug');
             }
         }, 1000);
     }
     
     // ======= ОБРАБОТЧИКИ СОБЫТИЙ =======
     setupEventListeners() {
-        // Обработка карты
+        // Карта
         this.map.on('moveend', () => {
-            this.updateViewport();
             this.scheduleRender();
         });
         
         this.map.on('zoomend', () => {
             this.currentZoom = this.map.getZoom();
-            this.updateViewport();
             this.scheduleRender();
             document.getElementById('zoomLevel').textContent = this.currentZoom;
         });
@@ -485,7 +423,7 @@ class OptimizedBattleMap {
             this.mouseDown = false;
         });
         
-        // Touch события для мобильных
+        // Touch для мобильных
         if (this.isMobile) {
             this.setupTouchEvents();
         }
@@ -496,12 +434,13 @@ class OptimizedBattleMap {
             this.scheduleRender();
         });
         
-        // Предотвращение контекстного меню
+        // Контекстное меню
         this.gridCanvas.addEventListener('contextmenu', e => e.preventDefault());
     }
     
     setupTouchEvents() {
         let touchStartTime = 0;
+        let lastTap = 0;
         
         this.gridCanvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
@@ -509,11 +448,28 @@ class OptimizedBattleMap {
             
             if (e.touches.length === 1) {
                 const touch = e.touches[0];
-                this.mouseDown = true;
-                this.revealAt(touch.clientX, touch.clientY);
+                const now = Date.now();
                 
-                this.dragStartX = touch.clientX;
-                this.dragStartY = touch.clientY;
+                // Двойной тап для зума
+                if (now - lastTap < 300) {
+                    this.map.zoomIn();
+                    this.log('Двойной тап - увеличение', 'debug');
+                } else {
+                    this.mouseDown = true;
+                    this.revealAt(touch.clientX, touch.clientY);
+                    this.dragStartX = touch.clientX;
+                    this.dragStartY = touch.clientY;
+                }
+                lastTap = now;
+                
+            } else if (e.touches.length === 2) {
+                // Pinch-to-zoom
+                this.mouseDown = false;
+                const distance = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+                this.lastTouchDistance = distance;
             }
         }, { passive: false });
         
@@ -525,18 +481,46 @@ class OptimizedBattleMap {
                 const dx = Math.abs(touch.clientX - this.dragStartX);
                 const dy = Math.abs(touch.clientY - this.dragStartY);
                 
-                // Если движение больше 10px - это drag
                 if (dx > 10 || dy > 10) {
+                    // Переключаемся на drag
                     this.mouseDown = false;
+                    const center = this.map.getCenter();
+                    const point = this.map.latLngToContainerPoint(center);
+                    point.x -= (touch.clientX - this.dragStartX);
+                    point.y -= (touch.clientY - this.dragStartY);
+                    
+                    this.map.panTo(this.map.containerPointToLatLng(point), {animate: false});
+                    
+                    this.dragStartX = touch.clientX;
+                    this.dragStartY = touch.clientY;
                 } else if (Date.now() - touchStartTime < 500) {
-                    // Короткое движение - продолжаем раскрывать
+                    // Продолжаем раскрывать
                     this.revealAt(touch.clientX, touch.clientY);
+                }
+                
+            } else if (e.touches.length === 2) {
+                // Pinch-to-zoom
+                const distance = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+                
+                if (this.lastTouchDistance > 0) {
+                    const scale = distance / this.lastTouchDistance;
+                    if (scale > 1.1) {
+                        this.map.zoomIn();
+                        this.lastTouchDistance = distance;
+                    } else if (scale < 0.9) {
+                        this.map.zoomOut();
+                        this.lastTouchDistance = distance;
+                    }
                 }
             }
         }, { passive: false });
         
         this.gridCanvas.addEventListener('touchend', () => {
             this.mouseDown = false;
+            this.lastTouchDistance = 0;
         });
     }
     
@@ -549,15 +533,61 @@ class OptimizedBattleMap {
             attributionControl: false
         });
         
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 18,
-            minZoom: 2
-        }).addTo(this.map);
+        // Стиль карты по умолчанию
+        this.changeMapStyle('osm');
         
         L.control.attribution({
             prefix: false,
             position: 'bottomleft'
         }).addTo(this.map);
+    }
+    
+    changeMapStyle(style) {
+        // Удаляем старый слой
+        if (this.tileLayer) {
+            this.map.removeLayer(this.tileLayer);
+        }
+        
+        let tileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+        let maxZoom = 18;
+        let attribution = '© OpenStreetMap';
+        
+        switch(style) {
+            case 'hot':
+                tileUrl = 'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png';
+                break;
+            case 'topo':
+                tileUrl = 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png';
+                maxZoom = 17;
+                break;
+            case 'cycle':
+                tileUrl = 'https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png';
+                break;
+            case 'positron':
+                tileUrl = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png';
+                attribution = '© CartoDB';
+                break;
+            case 'dark':
+                tileUrl = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png';
+                attribution = '© CartoDB';
+                break;
+            case 'satellite':
+                tileUrl = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+                attribution = '© Esri';
+                break;
+            case 'wikimedia':
+                tileUrl = 'https://maps.wikimedia.org/osm-intl/{z}/{x}/{y}.png';
+                attribution = '© Wikimedia';
+                break;
+        }
+        
+        this.tileLayer = L.tileLayer(tileUrl, {
+            maxZoom: maxZoom,
+            minZoom: 2,
+            attribution: attribution
+        }).addTo(this.map);
+        
+        this.log(`Стиль карты изменен на ${style}`, 'info');
     }
     
     getOrCreatePlayerId() {
@@ -600,12 +630,19 @@ class OptimizedBattleMap {
         const container = document.getElementById('countriesList');
         if (!container) return;
         
-        container.innerHTML = countries.map((country, index) => `
-            <div class="country-item">
-                <span>${index + 1}. ${country.flag} ${country.name}</span>
-                <span class="country-cells">${country.cells} клеток (${country.percentage}%)</span>
-            </div>
-        `).join('');
+        container.innerHTML = countries.map((country, index) => {
+            // Извлекаем флаг и название из строки вида "🇷🇺 Россия"
+            const parts = country.name.split(' ');
+            const flag = parts[0];
+            const name = parts.slice(1).join(' ');
+            
+            return `
+                <div class="country-item">
+                    <span>${index + 1}. ${flag} ${name}</span>
+                    <span class="country-cells">${country.cells} клеток (${country.percentage}%)</span>
+                </div>
+            `;
+        }).join('');
     }
     
     applyTheme(theme) {
@@ -629,14 +666,30 @@ class OptimizedBattleMap {
         const notification = document.createElement('div');
         notification.className = `notification ${type}`;
         notification.textContent = message;
+        notification.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.9);
+            background: ${type === 'warning' ? '#ff9800' : '#4CAF50'};
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            font-size: 14px;
+            z-index: 10000;
+            opacity: 0;
+            transition: all 0.3s ease;
+        `;
         document.body.appendChild(notification);
         
         setTimeout(() => {
-            notification.classList.add('show');
+            notification.style.opacity = '1';
+            notification.style.transform = 'translate(-50%, -50%) scale(1)';
         }, 10);
         
         setTimeout(() => {
-            notification.classList.remove('show');
+            notification.style.opacity = '0';
+            notification.style.transform = 'translate(-50%, -50%) scale(0.9)';
             setTimeout(() => notification.remove(), 300);
         }, 2000);
     }
@@ -648,7 +701,7 @@ class OptimizedBattleMap {
             timestamp: Date.now()
         };
         localStorage.setItem('battleMapProgress', JSON.stringify(data));
-        this.showNotification('💾 Прогресс сохранен локально');
+        this.showNotification('💾 Прогресс сохранен');
         this.log('Прогресс сохранен', 'info');
     }
     
@@ -687,6 +740,21 @@ class OptimizedBattleMap {
         this.log(`Сетка ${this.showGrid ? 'включена' : 'выключена'}`, 'info');
     }
     
+    toggleMenu() {
+        const menu = document.getElementById('sideMenu');
+        menu?.classList.toggle('active');
+    }
+    
+    toggleLogsPanel() {
+        const panel = document.getElementById('logsPanel');
+        if (panel) {
+            panel.classList.toggle('active');
+            if (panel.classList.contains('active')) {
+                this.renderLogs();
+            }
+        }
+    }
+    
     // Логирование
     log(message, level = 'info') {
         if (level === 'debug' && this.logLevel !== 'debug') return;
@@ -699,10 +767,14 @@ class OptimizedBattleMap {
             this.logs.shift();
         }
         
-        // Обновляем UI если панель открыта
         const logsContent = document.getElementById('logsContent');
         if (logsContent && logsContent.parentElement.parentElement.classList.contains('active')) {
             this.renderLogs();
+        }
+        
+        const debugStatus = document.getElementById('debugStatus');
+        if (debugStatus) {
+            debugStatus.textContent = this.logLevel === 'debug' ? 'ON' : 'OFF';
         }
         
         console.log(`[${timestamp}] [${level.toUpperCase()}] ${message}`);
@@ -720,21 +792,6 @@ class OptimizedBattleMap {
         `).join('');
         
         logsContent.scrollTop = logsContent.scrollHeight;
-    }
-    
-    toggleMenu() {
-        const menu = document.getElementById('sideMenu');
-        menu?.classList.toggle('active');
-    }
-    
-    toggleLogsPanel() {
-        const panel = document.getElementById('logsPanel');
-        if (panel) {
-            panel.classList.toggle('active');
-            if (panel.classList.contains('active')) {
-                this.renderLogs();
-            }
-        }
     }
     
     copyLogs() {
@@ -756,5 +813,5 @@ class OptimizedBattleMap {
 
 // Инициализация при загрузке
 document.addEventListener('DOMContentLoaded', () => {
-    window.battleMap = new OptimizedBattleMap();
+    window.battleMap = new FinalBattleMap();
 });
