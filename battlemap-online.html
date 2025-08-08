@@ -283,7 +283,25 @@
             <div style="margin-bottom: 8px;">🌍 Зум: <span id="zoomLevel">5</span></div>
             <div>📐 Сетка: 10×10 км</div>
         </div>
+        
+        <div class="online-stats">
+            <div class="online-stat-item">
+                <span class="online-stat-label">🌍 Всего раскрыто</span>
+                <span class="online-stat-value" id="totalCells">0</span>
+            </div>
+            <div class="online-stat-item">
+                <span class="online-stat-label">👥 Игроков онлайн</span>
+                <span class="online-stat-value" id="onlinePlayers">1</span>
+            </div>
+        </div>
+        
+        <div class="top-countries" id="topCountries">
+            <h3>🏆 Топ стран</h3>
+            <div id="countriesList"></div>
+        </div>
     </div>
+    
+    <div class="sync-status" id="syncStatus">Синхронизация...</div>
     
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -781,6 +799,116 @@
                         console.error('Ошибка загрузки прогресса:', e);
                     }
                 }
+                
+                // Загружаем с сервера последние данные
+                this.syncFromServer();
+            }
+            
+            // Онлайн функционал
+            async revealCellOnServer(cellKey, country) {
+                try {
+                    const response = await fetch('/api/reveal', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            cellKey,
+                            playerId: this.playerId,
+                            country
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        this.showSyncStatus('✓ Синхронизировано');
+                    }
+                } catch (error) {
+                    console.error('Ошибка синхронизации:', error);
+                }
+            }
+            
+            async syncToServer() {
+                try {
+                    const response = await fetch('/api/sync', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            playerId: this.playerId,
+                            cells: Array.from(this.revealedCells)
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        this.showSyncStatus('✓ Сохранено на сервере');
+                    }
+                } catch (error) {
+                    console.error('Ошибка синхронизации:', error);
+                }
+            }
+            
+            async syncFromServer() {
+                try {
+                    const response = await fetch('/api/game-state');
+                    if (!response.ok) return;
+                    
+                    const data = await response.json();
+                    
+                    // Объединяем клетки всех игроков
+                    if (data.allCells && data.allCells.length > 0) {
+                        data.allCells.forEach(cell => this.revealedCells.add(cell));
+                        this.updateStats();
+                        this.render();
+                    }
+                    
+                    // Обновляем онлайн статистику
+                    if (data.totalCells !== undefined) {
+                        document.getElementById('totalCells').textContent = data.totalCells.toLocaleString();
+                    }
+                    
+                    if (data.onlinePlayers !== undefined) {
+                        document.getElementById('onlinePlayers').textContent = data.onlinePlayers;
+                    }
+                    
+                    // Обновляем топ стран
+                    if (data.topCountries) {
+                        this.updateTopCountries(data.topCountries);
+                    }
+                    
+                } catch (error) {
+                    console.error('Ошибка загрузки с сервера:', error);
+                }
+            }
+            
+            updateTopCountries(countries) {
+                const list = document.getElementById('countriesList');
+                list.innerHTML = '';
+                
+                countries.forEach((country, index) => {
+                    const item = document.createElement('div');
+                    item.className = 'country-item';
+                    item.innerHTML = `
+                        <span>${index + 1}. ${country.name}</span>
+                        <span class="country-cells">${country.cells}</span>
+                    `;
+                    list.appendChild(item);
+                });
+            }
+            
+            showSyncStatus(message) {
+                const status = document.getElementById('syncStatus');
+                status.textContent = message;
+                status.classList.add('show');
+                setTimeout(() => {
+                    status.classList.remove('show');
+                }, 2000);
+            }
+            
+            startSyncTimer() {
+                // Синхронизация каждые 5 секунд
+                this.syncInterval = setInterval(() => {
+                    this.syncFromServer();
+                }, 5000);
+                
+                // Первая синхронизация сразу
+                setTimeout(() => this.syncFromServer(), 1000);
             }
         }
         
