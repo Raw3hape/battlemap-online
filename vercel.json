@@ -9,9 +9,5 @@
     "api/*.js": {
       "maxDuration": 10
     }
-  },
-  "env": {
-    "KV_REST_API_URL": "@battlemap-kv-rest-api-url",
-    "KV_REST_API_TOKEN": "@battlemap-kv-rest-api-token"
   }
 }
