@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>BattleMap - Раскрой реальную карту мира</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0a0a;
+            color: #ffffff;
+            overflow: hidden;
+            user-select: none;
+        }
+        
+        #map {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1;
+            filter: saturate(1.5) contrast(1.2);
+        }
+        
+        #fogCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 2;
+            pointer-events: none;
+        }
+        
+        #gridCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 3;
+            pointer-events: none;
+        }
+        
+        .ui-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 10;
+            pointer-events: none;
+        }
+        
+        .header {
+            background: linear-gradient(180deg, rgba(10,10,10,0.95) 0%, rgba(10,10,10,0) 100%);
+            padding: 20px;
+            text-align: center;
+            pointer-events: auto;
+        }
+        
+        h1 {
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            margin-bottom: 4px;
+        }
+        
+        .subtitle {
+            font-size: 12px;
+            opacity: 0.7;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        
+        .stats {
+            position: fixed;
+            top: 100px;
+            left: 20px;
+            background: rgba(20, 20, 20, 0.9);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 16px;
+            pointer-events: auto;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 10;
+        }
+        
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            min-width: 140px;
+        }
+        
+        .stat-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            opacity: 0.6;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .stat-value {
+            font-size: 18px;
+            font-weight: 600;
+            color: #4CAF50;
+        }
+        
+        .controls {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: auto;
+            z-index: 10;
+        }
+        
+        .control-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: rgba(30, 30, 30, 0.9);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .control-btn:hover {
+            background: rgba(50, 50, 50, 0.9);
+            transform: scale(1.1);
+        }
+        
+        .control-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .map-style-selector {
+            position: fixed;
+            bottom: 30px;
+            left: 30px;
+            background: rgba(20, 20, 20, 0.9);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 10;
+        }
+        
+        .map-style-selector select {
+            background: rgba(40, 40, 40, 0.9);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 8px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        
+        /* Затемняем стиль карты Leaflet */
+        .leaflet-tile {
+            filter: brightness(0.8);
+        }
+        
+        .leaflet-control-zoom {
+            display: none;
+        }
+        
+        .leaflet-control-attribution {
+            background: rgba(0,0,0,0.7) !important;
+            color: rgba(255,255,255,0.5) !important;
+        }
+        
+        .leaflet-control-attribution a {
+            color: rgba(255,255,255,0.7) !important;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <canvas id="fogCanvas"></canvas>
+    <canvas id="gridCanvas"></canvas>
+    
+    <div class="ui-container">
+        <div class="header">
+            <h1>BattleMap</h1>
+            <p class="subtitle">Раскрой реальную карту мира</p>
+            <p style="font-size: 11px; opacity: 0.5; margin-top: 8px;">
+                ЛКМ - раскрыть | Shift+ЛКМ или ПКМ - перетащить | Колесо - зум
+            </p>
+        </div>
+        
+        <div class="stats">
+            <div class="stat-item">
+                <span class="stat-label">Раскрыто</span>
+                <span class="stat-value" id="revealedCount">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Прогресс</span>
+                <span class="stat-value" id="progressPercent">0%</span>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button class="control-btn" onclick="battleMap.resetFog()">↺</button>
+            <button class="control-btn" onclick="battleMap.toggleGrid()">⊞</button>
+        </div>
+        
+        <div class="map-style-selector">
+            <select id="mapStyle" onchange="battleMap.changeMapStyle(this.value)">
+                <option value="osm">OpenStreetMap</option>
+                <option value="satellite">Спутник</option>
+                <option value="terrain">Рельеф</option>
+                <option value="dark">Тёмная</option>
+            </select>
+        </div>
+    </div>
+    
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <script>
+        class BattleMapOSM {
+            constructor() {
+                this.map = null;
+                this.fogCanvas = document.getElementById('fogCanvas');
+                this.gridCanvas = document.getElementById('gridCanvas');
+                this.fogCtx = this.fogCanvas.getContext('2d');
+                this.gridCtx = this.gridCanvas.getContext('2d');
+                
+                this.pixelSize = 10;
+                this.revealedTiles = new Set();
+                this.showGrid = true; // Сетка включена по умолчанию
+                
+                this.totalTiles = 0;
+                this.mouseDown = false;
+                this.isDragging = false;
+                this.dragStartX = 0;
+                this.dragStartY = 0;
+                
+                this.init();
+            }
+            
+            init() {
+                this.setupCanvas();
+                this.setupMap();
+                this.setupEventListeners();
+                this.initializeFog();
+            }
+            
+            setupCanvas() {
+                const resize = () => {
+                    this.fogCanvas.width = window.innerWidth;
+                    this.fogCanvas.height = window.innerHeight;
+                    this.gridCanvas.width = window.innerWidth;
+                    this.gridCanvas.height = window.innerHeight;
+                    this.render();
+                };
+                
+                resize();
+                window.addEventListener('resize', resize);
+            }
+            
+            setupMap() {
+                // Инициализация карты Leaflet
+                this.map = L.map('map', {
+                    center: [48.8566, 2.3522], // Париж по умолчанию
+                    zoom: 5,
+                    zoomControl: false,
+                    attributionControl: true
+                });
+                
+                // Добавляем слой OpenStreetMap
+                this.tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
+                    attribution: '© OpenStreetMap contributors'
+                }).addTo(this.map);
+                
+                // Включаем взаимодействие с картой для навигации
+                this.map.dragging.enable();
+                this.map.touchZoom.enable();
+                this.map.doubleClickZoom.enable();
+                this.map.scrollWheelZoom.enable();
+                this.map.boxZoom.enable();
+                this.map.keyboard.enable();
+            }
+            
+            changeMapStyle(style) {
+                if (this.tileLayer) {
+                    this.map.removeLayer(this.tileLayer);
+                }
+                
+                let url, attribution;
+                
+                switch(style) {
+                    case 'satellite':
+                        url = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+                        attribution = '© Esri';
+                        break;
+                    case 'terrain':
+                        url = 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png';
+                        attribution = '© OpenTopoMap';
+                        break;
+                    case 'dark':
+                        url = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+                        attribution = '© CartoDB';
+                        break;
+                    default:
+                        url = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+                        attribution = '© OpenStreetMap contributors';
+                }
+                
+                this.tileLayer = L.tileLayer(url, {
+                    maxZoom: 19,
+                    attribution: attribution
+                }).addTo(this.map);
+            }
+            
+            initializeFog() {
+                const width = this.fogCanvas.width;
+                const height = this.fogCanvas.height;
+                
+                // Рассчитываем общее количество тайлов
+                this.totalTiles = Math.ceil(width / this.pixelSize) * 
+                                Math.ceil(height / this.pixelSize);
+                
+                this.render();
+            }
+            
+            setupEventListeners() {
+                // Обработка кликов для раскрытия тумана
+                this.fogCanvas.style.pointerEvents = 'auto';
+                
+                this.fogCanvas.addEventListener('mousedown', (e) => {
+                    // Если зажат Shift или правая кнопка - перетаскивание карты
+                    if (e.shiftKey || e.button === 2) {
+                        this.isDragging = true;
+                        this.dragStartX = e.clientX;
+                        this.dragStartY = e.clientY;
+                        this.fogCanvas.style.cursor = 'grab';
+                    } else {
+                        this.mouseDown = true;
+                        this.dragStartX = e.clientX;
+                        this.dragStartY = e.clientY;
+                        this.revealAt(e.clientX, e.clientY);
+                    }
+                });
+                
+                this.fogCanvas.addEventListener('mousemove', (e) => {
+                    if (this.isDragging) {
+                        // Перетаскивание карты
+                        const dx = e.clientX - this.dragStartX;
+                        const dy = e.clientY - this.dragStartY;
+                        
+                        const center = this.map.getCenter();
+                        const point = this.map.latLngToContainerPoint(center);
+                        point.x -= dx;
+                        point.y -= dy;
+                        
+                        this.map.panTo(this.map.containerPointToLatLng(point), {animate: false});
+                        
+                        this.dragStartX = e.clientX;
+                        this.dragStartY = e.clientY;
+                    } else if (this.mouseDown) {
+                        // Проверяем, не начали ли перетаскивание
+                        const dx = Math.abs(e.clientX - this.dragStartX);
+                        const dy = Math.abs(e.clientY - this.dragStartY);
+                        
+                        if (dx > 5 || dy > 5) {
+                            // Начинаем перетаскивание если сдвинули мышь
+                            this.mouseDown = false;
+                            this.isDragging = true;
+                            this.fogCanvas.style.cursor = 'grab';
+                        } else {
+                            // Продолжаем раскрывать пиксели
+                            this.revealAt(e.clientX, e.clientY);
+                        }
+                    }
+                    
+                    if (!this.isDragging) {
+                        this.updateHover(e.clientX, e.clientY);
+                    }
+                });
+                
+                this.fogCanvas.addEventListener('mouseup', (e) => {
+                    if (!this.isDragging && this.mouseDown) {
+                        // Это был клик, а не драг
+                        this.revealAt(e.clientX, e.clientY);
+                    }
+                    
+                    this.mouseDown = false;
+                    this.isDragging = false;
+                    this.fogCanvas.style.cursor = 'default';
+                });
+                
+                this.fogCanvas.addEventListener('mouseleave', () => {
+                    this.mouseDown = false;
+                    this.isDragging = false;
+                    this.hoverX = -1;
+                    this.hoverY = -1;
+                    this.fogCanvas.style.cursor = 'default';
+                    this.render();
+                });
+                
+                // Отключаем контекстное меню
+                this.fogCanvas.addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                });
+                
+                // Зум колесом мыши через fogCanvas
+                this.fogCanvas.addEventListener('wheel', (e) => {
+                    e.preventDefault();
+                    const delta = e.deltaY > 0 ? -1 : 1;
+                    this.map.setZoom(this.map.getZoom() + delta);
+                });
+                
+                // Touch события
+                this.fogCanvas.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    const touch = e.touches[0];
+                    this.revealAt(touch.clientX, touch.clientY);
+                    this.mouseDown = true;
+                });
+                
+                this.fogCanvas.addEventListener('touchmove', (e) => {
+                    e.preventDefault();
+                    if (this.mouseDown && e.touches.length === 1) {
+                        const touch = e.touches[0];
+                        this.revealAt(touch.clientX, touch.clientY);
+                    }
+                });
+                
+                this.fogCanvas.addEventListener('touchend', () => {
+                    this.mouseDown = false;
+                });
+                
+                // Управление картой с клавишами
+                document.addEventListener('keydown', (e) => {
+                    const moveDistance = 100;
+                    const point = this.map.getSize().divideBy(2);
+                    
+                    switch(e.key) {
+                        case 'ArrowUp':
+                        case 'w':
+                            point.y -= moveDistance;
+                            this.map.panTo(this.map.containerPointToLatLng(point));
+                            break;
+                        case 'ArrowDown':
+                        case 's':
+                            point.y += moveDistance;
+                            this.map.panTo(this.map.containerPointToLatLng(point));
+                            break;
+                        case 'ArrowLeft':
+                        case 'a':
+                            point.x -= moveDistance;
+                            this.map.panTo(this.map.containerPointToLatLng(point));
+                            break;
+                        case 'ArrowRight':
+                        case 'd':
+                            point.x += moveDistance;
+                            this.map.panTo(this.map.containerPointToLatLng(point));
+                            break;
+                        case '+':
+                        case '=':
+                            this.map.zoomIn();
+                            break;
+                        case '-':
+                        case '_':
+                            this.map.zoomOut();
+                            break;
+                    }
+                });
+            }
+            
+            updateHover(x, y) {
+                const gridX = Math.floor(x / this.pixelSize);
+                const gridY = Math.floor(y / this.pixelSize);
+                
+                if (gridX !== this.hoverX || gridY !== this.hoverY) {
+                    this.hoverX = gridX;
+                    this.hoverY = gridY;
+                    this.render();
+                }
+            }
+            
+            revealAt(x, y) {
+                const gridX = Math.floor(x / this.pixelSize);
+                const gridY = Math.floor(y / this.pixelSize);
+                
+                const tileKey = `${gridX},${gridY}`;
+                
+                if (!this.revealedTiles.has(tileKey)) {
+                    this.revealedTiles.add(tileKey);
+                    this.updateStats();
+                    this.render();
+                }
+            }
+            
+            render() {
+                // Очищаем canvas
+                this.fogCtx.clearRect(0, 0, this.fogCanvas.width, this.fogCanvas.height);
+                this.gridCtx.clearRect(0, 0, this.gridCanvas.width, this.gridCanvas.height);
+                
+                // Рисуем туман (более прозрачный)
+                this.fogCtx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+                this.fogCtx.fillRect(0, 0, this.fogCanvas.width, this.fogCanvas.height);
+                
+                // Вырезаем раскрытые области
+                this.fogCtx.globalCompositeOperation = 'destination-out';
+                this.revealedTiles.forEach(tileKey => {
+                    const [x, y] = tileKey.split(',').map(Number);
+                    this.fogCtx.fillRect(
+                        x * this.pixelSize,
+                        y * this.pixelSize,
+                        this.pixelSize,
+                        this.pixelSize
+                    );
+                });
+                this.fogCtx.globalCompositeOperation = 'source-over';
+                
+                // Рисуем сетку если включена
+                if (this.showGrid) {
+                    this.drawGrid();
+                }
+                
+                // Подсветка при наведении
+                if (this.hoverX >= 0 && this.hoverY >= 0) {
+                    const tileKey = `${this.hoverX},${this.hoverY}`;
+                    if (!this.revealedTiles.has(tileKey)) {
+                        this.gridCtx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                        this.gridCtx.fillRect(
+                            this.hoverX * this.pixelSize,
+                            this.hoverY * this.pixelSize,
+                            this.pixelSize,
+                            this.pixelSize
+                        );
+                        
+                        this.gridCtx.strokeStyle = 'rgba(0, 0, 0, 0.8)';
+                        this.gridCtx.lineWidth = 2;
+                        this.gridCtx.strokeRect(
+                            this.hoverX * this.pixelSize,
+                            this.hoverY * this.pixelSize,
+                            this.pixelSize,
+                            this.pixelSize
+                        );
+                    }
+                }
+            }
+            
+            drawGrid() {
+                this.gridCtx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
+                this.gridCtx.lineWidth = 0.5;
+                
+                // Вертикальные линии
+                for (let x = 0; x <= this.gridCanvas.width; x += this.pixelSize) {
+                    this.gridCtx.beginPath();
+                    this.gridCtx.moveTo(x, 0);
+                    this.gridCtx.lineTo(x, this.gridCanvas.height);
+                    this.gridCtx.stroke();
+                }
+                
+                // Горизонтальные линии
+                for (let y = 0; y <= this.gridCanvas.height; y += this.pixelSize) {
+                    this.gridCtx.beginPath();
+                    this.gridCtx.moveTo(0, y);
+                    this.gridCtx.lineTo(this.gridCanvas.width, y);
+                    this.gridCtx.stroke();
+                }
+            }
+            
+            toggleGrid() {
+                this.showGrid = !this.showGrid;
+                this.render();
+            }
+            
+            updateStats() {
+                const revealedCount = this.revealedTiles.size;
+                const percentage = ((revealedCount / this.totalTiles) * 100).toFixed(2);
+                
+                document.getElementById('revealedCount').textContent = revealedCount.toLocaleString();
+                document.getElementById('progressPercent').textContent = `${percentage}%`;
+            }
+            
+            resetFog() {
+                this.revealedTiles.clear();
+                this.updateStats();
+                this.render();
+            }
+        }
+        
+        // Инициализация при загрузке
+        let battleMap;
+        document.addEventListener('DOMContentLoaded', () => {
+            battleMap = new BattleMapOSM();
+        });
+    </script>
+</body>
+</html>

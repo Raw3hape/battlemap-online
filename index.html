@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>BattleMap - Раскрой карту своей страны</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="app">
+        <div id="map"></div>
+        
+        <div class="ui-container">
+            <div class="header">
+                <h1>BattleMap</h1>
+                <p class="subtitle">Раскрой карту своей страны</p>
+            </div>
+            
+            <div class="stats">
+                <div class="stat-item">
+                    <span class="stat-label">Раскрыто</span>
+                    <span class="stat-value" id="revealedCount">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Прогресс</span>
+                    <span class="stat-value" id="progressPercent">0%</span>
+                </div>
+            </div>
+            
+            <div class="controls">
+                <div class="map-style-selector">
+                    <select id="mapStyle" class="style-dropdown">
+                        <option value="osm">OpenStreetMap Standard</option>
+                        <option value="topo">OpenTopoMap (топографическая)</option>
+                        <option value="cycle">CyclOSM (для велосипедистов)</option>
+                        <option value="toner">Stamen Toner (чёрно-белая)</option>
+                        <option value="watercolor">Stamen Watercolor (акварельная)</option>
+                        <option value="positron">CartoDB Positron (светлая)</option>
+                        <option value="dark">CartoDB Dark Matter (тёмная)</option>
+                        <option value="satellite">ESRI World Imagery (спутник)</option>
+                    </select>
+                </div>
+                <button id="resetBtn" class="control-btn">↺</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

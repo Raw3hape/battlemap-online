@@ -1,0 +1,25 @@
+{
+  "name": "battlemap-online",
+  "version": "1.0.0",
+  "description": "Онлайн игра раскрытия карты мира",
+  "main": "app.js",
+  "scripts": {
+    "dev": "vercel dev",
+    "build": "echo 'No build needed'",
+    "deploy": "vercel --prod",
+    "setup-kv": "node scripts/setup-kv.js"
+  },
+  "keywords": [
+    "map",
+    "game",
+    "online"
+  ],
+  "author": "Raw3hape",
+  "license": "MIT",
+  "dependencies": {
+    "@vercel/kv": "^1.0.1"
+  },
+  "devDependencies": {
+    "vercel": "^32.5.0"
+  }
+}

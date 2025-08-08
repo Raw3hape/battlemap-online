@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>World Map Generator</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://d3js.org/topojson.v3.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        canvas {
+            background: #1a1a2e;
+        }
+        button {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="mapCanvas"></canvas>
+    <button onclick="downloadMap()">Скачать карту</button>
+    
+    <script>
+        const width = 4096;
+        const height = 2048;
+        
+        const canvas = document.getElementById('mapCanvas');
+        canvas.width = width;
+        canvas.height = height;
+        canvas.style.maxWidth = '90vw';
+        canvas.style.height = 'auto';
+        
+        const ctx = canvas.getContext('2d');
+        
+        // Цвета для разных стран (будем назначать случайным образом)
+        const countryColors = [
+            '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', 
+            '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F',
+            '#FF8C94', '#FFD93D', '#6BCB77', '#4D96FF',
+            '#9B59B6', '#E67E22', '#1ABC9C', '#34495E',
+            '#E74C3C', '#3498DB', '#2ECC71', '#F39C12'
+        ];
+        
+        // Загружаем данные Natural Earth (110m resolution для быстрой загрузки)
+        fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json')
+            .then(response => response.json())
+            .then(world => {
+                // Очищаем холст
+                ctx.fillStyle = '#1a1a2e';
+                ctx.fillRect(0, 0, width, height);
+                
+                // Настройка проекции
+                const projection = d3.geoNaturalEarth1()
+                    .scale(width / 2 / Math.PI * 0.9)
+                    .translate([width / 2, height / 2]);
+                
+                const path = d3.geoPath()
+                    .projection(projection)
+                    .context(ctx);
+                
+                // Преобразуем TopoJSON в GeoJSON
+                const countries = topojson.feature(world, world.objects.countries);
+                
+                // Создаем map для цветов стран
+                const colorMap = new Map();
+                countries.features.forEach((country, i) => {
+                    colorMap.set(country.id, countryColors[i % countryColors.length]);
+                });
+                
+                // Рисуем страны
+                countries.features.forEach(country => {
+                    ctx.beginPath();
+                    path(country);
+                    ctx.fillStyle = colorMap.get(country.id);
+                    ctx.fill();
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                });
+                
+                console.log('Карта готова!');
+            })
+            .catch(err => {
+                console.error('Ошибка загрузки данных:', err);
+                // Fallback: создаем простую карту
+                createSimpleMap();
+            });
+        
+        function createSimpleMap() {
+            // Упрощенная карта континентов
+            ctx.fillStyle = '#1a1a2e';
+            ctx.fillRect(0, 0, width, height);
+            
+            // Евразия
+            ctx.fillStyle = '#FF6B6B';
+            ctx.fillRect(width * 0.4, height * 0.2, width * 0.4, height * 0.3);
+            
+            // Африка
+            ctx.fillStyle = '#4ECDC4';
+            ctx.fillRect(width * 0.45, height * 0.5, width * 0.15, height * 0.35);
+            
+            // Северная Америка
+            ctx.fillStyle = '#45B7D1';
+            ctx.fillRect(width * 0.1, height * 0.2, width * 0.2, height * 0.3);
+            
+            // Южная Америка
+            ctx.fillStyle = '#96CEB4';
+            ctx.fillRect(width * 0.2, height * 0.5, width * 0.1, height * 0.35);
+            
+            // Австралия
+            ctx.fillStyle = '#FFEAA7';
+            ctx.fillRect(width * 0.7, height * 0.65, width * 0.15, height * 0.15);
+        }
+        
+        function downloadMap() {
+            canvas.toBlob(blob => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'world-map.png';
+                a.click();
+                URL.revokeObjectURL(url);
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест стилей карт</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body { margin: 0; padding: 20px; font-family: Arial, sans-serif; background: #f0f0f0; }
+        .container { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; }
+        .map-box { background: white; border-radius: 8px; padding: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .map-title { font-weight: bold; margin-bottom: 10px; padding: 5px; background: #333; color: white; text-align: center; border-radius: 4px; }
+        .map { height: 300px; border-radius: 4px; }
+        .status { margin-top: 5px; font-size: 12px; }
+        .success { color: green; }
+        .error { color: red; }
+        .loading { color: orange; }
+    </style>
+</head>
+<body>
+    <h1>Тестирование всех стилей карт</h1>
+    <div class="container" id="container"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        const mapStyles = [
+            {
+                name: 'OpenStreetMap Standard',
+                url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                attribution: '© OpenStreetMap'
+            },
+            {
+                name: 'OpenTopoMap',
+                url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+                attribution: '© OpenTopoMap'
+            },
+            {
+                name: 'CyclOSM',
+                url: 'https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png',
+                attribution: '© CyclOSM'
+            },
+            {
+                name: 'Stamen Toner (через Stadia)',
+                url: 'https://tiles.stadiamaps.com/tiles/stamen_toner/{z}/{x}/{y}.png',
+                attribution: '© Stadia Maps'
+            },
+            {
+                name: 'Stamen Watercolor (через Stadia)',
+                url: 'https://tiles.stadiamaps.com/tiles/stamen_watercolor/{z}/{x}/{y}.jpg',
+                attribution: '© Stadia Maps'
+            },
+            {
+                name: 'CartoDB Positron',
+                url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
+                attribution: '© CartoDB'
+            },
+            {
+                name: 'CartoDB Dark Matter',
+                url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+                attribution: '© CartoDB'
+            },
+            {
+                name: 'ESRI World Imagery',
+                url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+                attribution: '© ESRI'
+            }
+        ];
+
+        // Альтернативные URL для проблемных карт
+        const alternativeStyles = [
+            {
+                name: 'OpenStreetMap HOT',
+                url: 'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
+                attribution: '© OpenStreetMap, HOT'
+            },
+            {
+                name: 'Thunderforest Landscape',
+                url: 'https://{s}.tile.thunderforest.com/landscape/{z}/{x}/{y}.png',
+                attribution: '© Thunderforest'
+            },
+            {
+                name: 'Wikimedia Maps',
+                url: 'https://maps.wikimedia.org/osm-intl/{z}/{x}/{y}.png',
+                attribution: '© Wikimedia'
+            }
+        ];
+
+        const container = document.getElementById('container');
+        const allStyles = [...mapStyles, ...alternativeStyles];
+
+        allStyles.forEach((style, index) => {
+            const mapBox = document.createElement('div');
+            mapBox.className = 'map-box';
+            
+            const title = document.createElement('div');
+            title.className = 'map-title';
+            title.textContent = style.name;
+            
+            const mapDiv = document.createElement('div');
+            mapDiv.className = 'map';
+            mapDiv.id = `map${index}`;
+            
+            const status = document.createElement('div');
+            status.className = 'status loading';
+            status.id = `status${index}`;
+            status.textContent = 'Загрузка...';
+            
+            mapBox.appendChild(title);
+            mapBox.appendChild(mapDiv);
+            mapBox.appendChild(status);
+            container.appendChild(mapBox);
+            
+            setTimeout(() => {
+                try {
+                    const map = L.map(`map${index}`, {
+                        center: [55.7558, 37.6173],
+                        zoom: 10,
+                        zoomControl: false,
+                        attributionControl: false
+                    });
+                    
+                    const tileLayer = L.tileLayer(style.url, {
+                        maxZoom: 18,
+                        attribution: style.attribution
+                    });
+                    
+                    tileLayer.on('tileload', function() {
+                        const statusEl = document.getElementById(`status${index}`);
+                        if (statusEl.classList.contains('loading')) {
+                            statusEl.className = 'status success';
+                            statusEl.textContent = '✓ Работает';
+                        }
+                    });
+                    
+                    tileLayer.on('tileerror', function(e) {
+                        const statusEl = document.getElementById(`status${index}`);
+                        statusEl.className = 'status error';
+                        statusEl.textContent = '✗ Ошибка загрузки';
+                        console.error(`Ошибка загрузки ${style.name}:`, e);
+                    });
+                    
+                    tileLayer.addTo(map);
+                    
+                    // Таймаут для проверки загрузки
+                    setTimeout(() => {
+                        const statusEl = document.getElementById(`status${index}`);
+                        if (statusEl.classList.contains('loading')) {
+                            statusEl.className = 'status error';
+                            statusEl.textContent = '✗ Таймаут';
+                        }
+                    }, 5000);
+                    
+                } catch(e) {
+                    document.getElementById(`status${index}`).className = 'status error';
+                    document.getElementById(`status${index}`).textContent = '✗ Ошибка инициализации';
+                    console.error(`Ошибка создания карты ${style.name}:`, e);
+                }
+            }, index * 100);
+        });
+    </script>
+</body>
+</html>
