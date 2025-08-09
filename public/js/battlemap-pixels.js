@@ -787,6 +787,7 @@ style.textContent = `
         display: flex;
         flex-direction: column;
         gap: 10px;
+        pointer-events: auto !important;
     }
     
     .palette-header {
@@ -810,6 +811,7 @@ style.textContent = `
         border-radius: 4px;
         cursor: pointer;
         transition: all 0.2s;
+        pointer-events: auto !important;
     }
     
     .color-btn:hover {
@@ -827,10 +829,13 @@ style.textContent = `
         gap: 5px;
         color: var(--text-color);
         font-size: 12px;
+        pointer-events: auto !important;
     }
     
     .palette-opacity input {
         width: 100%;
+        pointer-events: auto !important;
+        cursor: pointer;
     }
     
     @media (max-width: 768px) {
