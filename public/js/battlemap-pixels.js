@@ -66,6 +66,7 @@ class PixelBattleMap {
             this.loadLocalPixels();
             await this.syncWithServer();
             this.startPeriodicSync();
+            this.setupUIEventHandlers();
         });
     }
     
@@ -326,11 +327,67 @@ class PixelBattleMap {
         return null;
     }
     
+    setupUIEventHandlers() {
+        // Предотвращаем всплытие событий от всех UI элементов
+        const uiElements = [
+            '.menu-button',
+            '.side-menu',
+            '.ui-container',
+            '.stats',
+            '.online-stats',
+            '.controls',
+            '.top-countries',
+            '.logs-panel',
+            '.sync-status'
+        ];
+        
+        uiElements.forEach(selector => {
+            const elements = document.querySelectorAll(selector);
+            elements.forEach(element => {
+                element.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                });
+                element.addEventListener('mousedown', (e) => {
+                    e.stopPropagation();
+                });
+                element.addEventListener('touchstart', (e) => {
+                    e.stopPropagation();
+                }, { passive: true });
+            });
+        });
+        
+        // Обеспечиваем работу кнопки меню
+        const menuButton = document.querySelector('.menu-button');
+        if (menuButton) {
+            menuButton.onclick = (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                this.toggleMenu();
+            };
+        }
+    }
+    
     setupInteraction() {
         const mapContainer = this.map.getContainer();
         
-        // Обработка кликов
+        // Обработка кликов с проверкой UI элементов
         this.map.on('click', (e) => {
+            // Проверяем, не был ли клик на UI элементе
+            const target = e.originalEvent?.target;
+            if (target) {
+                // Если клик был на UI элементе, не обрабатываем
+                if (target.closest('.color-palette') ||
+                    target.closest('.side-menu') ||
+                    target.closest('.menu-button') ||
+                    target.closest('.ui-container') ||
+                    target.closest('.controls') ||
+                    target.closest('.stats') ||
+                    target.closest('.online-stats') ||
+                    target.closest('.top-countries') ||
+                    target.closest('.logs-panel')) {
+                    return;
+                }
+            }
             this.handlePixelPlace(e.latlng);
         });
         
@@ -413,6 +470,17 @@ class PixelBattleMap {
             </div>
         `;
         
+        // Предотвращаем всплытие событий от палитры к карте
+        paletteContainer.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+        paletteContainer.addEventListener('mousedown', (e) => {
+            e.stopPropagation();
+        });
+        paletteContainer.addEventListener('touchstart', (e) => {
+            e.stopPropagation();
+        });
+        
         // Добавляем цвета
         const colorsDiv = paletteContainer.querySelector('.palette-colors');
         this.colorPalette.forEach((color, index) => {
@@ -424,10 +492,13 @@ class PixelBattleMap {
             
             if (index === 0) colorBtn.classList.add('active');
             
-            colorBtn.addEventListener('click', () => {
+            colorBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                e.preventDefault();
                 document.querySelectorAll('.color-btn').forEach(btn => btn.classList.remove('active'));
                 colorBtn.classList.add('active');
                 this.selectedColor = color.hex;
+                console.log('Выбран цвет:', color.name, color.hex);
             });
             
             colorsDiv.appendChild(colorBtn);
@@ -662,6 +733,13 @@ class PixelBattleMap {
     toggleTheme() {
         const newTheme = this.theme === 'dark' ? 'light' : 'dark';
         this.applyTheme(newTheme);
+    }
+    
+    toggleMenu() {
+        const menu = document.getElementById('sideMenu');
+        if (menu) {
+            menu.classList.toggle('active');
+        }
     }
     
     clearPixels() {
