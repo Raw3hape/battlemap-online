@@ -90,9 +90,24 @@ class OptimizedBattleMap {
                 console.log('Не удалось загрузить данные с сервера, используем локальные');
             }
             
-            // Если есть хоть какие-то данные (локальные или с сервера), рендерим
-            // Если данных нет вообще, всё равно рендерим (пустая карта)
-            this.firstRenderComplete = true; // Разрешаем рендер
+            // Если совсем нет раскрытых клеток (новый пользователь), добавляем стартовые
+            if (this.revealedCells.size === 0) {
+                console.log('Новый пользователь - добавляем стартовые клетки');
+                // Добавляем несколько клеток вокруг центра карты (Москва)
+                const startCells = [
+                    '55.6893,37.5303', // Центр Москвы
+                    '55.7798,37.5303', // Север
+                    '55.6893,37.6211', // Восток
+                    '55.5986,37.5303', // Юг
+                    '55.6893,37.4395'  // Запад
+                ];
+                startCells.forEach(cell => this.revealedCells.add(cell));
+                // Обновляем локальную статистику
+                this.updateLocalStats();
+            }
+            
+            // Теперь рендерим с начальными данными
+            this.firstRenderComplete = true;
             this.renderImmediate();
             
             // Скрываем индикатор
@@ -365,11 +380,8 @@ class OptimizedBattleMap {
             return;
         }
         
-        // Не рендерим если данные еще не загружены при первом запуске
-        if (this.revealedCells.size === 0 && !this.firstRenderComplete) {
-            console.log('Waiting for data before first render');
-            return;
-        }
+        // Удаляем блокировку рендера - всегда рендерим
+        // Даже если нет раскрытых клеток, показываем полный туман
         
         const bounds = this.map.getBounds();
         const zoom = this.map.getZoom();
@@ -488,8 +500,10 @@ class OptimizedBattleMap {
         this.fogCtx.restore();
         this.gridCtx.restore();
         
-        // Помечаем что первый рендер выполнен
-        this.firstRenderComplete = true;
+        // Помечаем что первый рендер выполнен (только если еще не помечен)
+        if (!this.firstRenderComplete) {
+            this.firstRenderComplete = true;
+        }
     }
     
     drawGrid(startLat, endLat, startLng, endLng) {
