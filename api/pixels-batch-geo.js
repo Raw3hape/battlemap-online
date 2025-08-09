@@ -151,8 +151,8 @@ export default async function handler(req, res) {
         }
         
         // Обрабатываем пиксели и определяем страны
-        const pipeline = redis.pipeline();
         const timestamp = Date.now();
+        const promises = [];
         
         for (const pixel of pixels) {
             if (!pixel.position || !pixel.color) continue;
@@ -162,7 +162,6 @@ export default async function handler(req, res) {
             const countryCode = getCountryCode(lat, lng);
             
             const pixelData = {
-                position: pixel.position,
                 color: pixel.color,
                 opacity: pixel.opacity || 0.6,
                 playerId: playerId || 'anonymous',
@@ -170,31 +169,43 @@ export default async function handler(req, res) {
                 timestamp: timestamp
             };
             
-            // Сохраняем пиксель
-            pipeline.hset('pixels:map', pixel.position, JSON.stringify(pixelData));
+            // Сохраняем пиксель (ВАЖНО: правильный формат JSON)
+            promises.push(
+                redis.hset('pixels:map', pixel.position, JSON.stringify(pixelData))
+            );
             
             // Обновляем статистику страна+цвет
             const countryColorKey = `${countryCode}:${pixel.color}`;
-            pipeline.hincrby('pixels:country:color', countryColorKey, 1);
+            promises.push(
+                redis.hincrby('pixels:country:color', countryColorKey, 1)
+            );
             
             // Обновляем общую статистику страны
-            pipeline.hincrby('pixels:country:total', countryCode, 1);
+            promises.push(
+                redis.hincrby('pixels:country:total', countryCode, 1)
+            );
             
             // Обновляем статистику цветов
-            pipeline.hincrby('pixels:colors:count', pixel.color, 1);
+            promises.push(
+                redis.hincrby('pixels:colors:count', pixel.color, 1)
+            );
             
             // Timeline
-            pipeline.zadd('pixels:timeline', {
-                score: timestamp,
-                member: `${pixel.position}:${playerId}:${pixel.color}:${countryCode}`
-            });
+            promises.push(
+                redis.zadd('pixels:timeline', {
+                    score: timestamp,
+                    member: `${pixel.position}:${playerId}:${pixel.color}:${countryCode}`
+                })
+            );
         }
         
         // Обновляем общий счетчик
-        pipeline.incrby('pixels:total', pixels.length);
+        promises.push(
+            redis.incrby('pixels:total', pixels.length)
+        );
         
-        // Выполняем все команды
-        await pipeline.exec();
+        // Выполняем все команды параллельно
+        await Promise.all(promises);
         
         // Очищаем старые записи
         const oneDayAgo = timestamp - (24 * 60 * 60 * 1000);

@@ -40,7 +40,7 @@ class PixelBattleMap {
         
         // Синхронизация
         this.syncInterval = null;
-        this.syncDelay = 30000;
+        this.syncDelay = 10000; // Синхронизация каждые 10 секунд
         this.isSyncing = false;
         
         // Тема
@@ -268,29 +268,42 @@ class PixelBattleMap {
     // Рендеринг с учетом плотности
     renderWithDensity(ctx, coords, tileSize, densityMap, zoom) {
         densityMap.forEach(cell => {
-            // Конвертируем центр ячейки в координаты тайла
-            const point = this.latLngToTilePixel(cell.centerLat, cell.centerLng, coords, tileSize);
-            
-            if (point) {
-                // Размер отображения зависит от количества пикселей и зума
-                const baseSize = Math.min(10, 2 + Math.sqrt(cell.pixels.length));
-                const size = zoom <= 2 ? baseSize * 0.5 : zoom <= 3 ? baseSize * 0.7 : baseSize;
+            // Для больших групп пикселей рисуем все пиксели, а не только центр
+            if (zoom >= 4 && cell.pixels.length > 3) {
+                // Рисуем каждый пиксель в группе для сохранения формы
+                cell.pixels.forEach(pixel => {
+                    const point = this.latLngToTilePixel(pixel.lat, pixel.lng, coords, tileSize);
+                    if (point) {
+                        const size = zoom <= 5 ? 3 : zoom <= 6 ? 4 : 5;
+                        ctx.fillStyle = pixel.color;
+                        ctx.globalAlpha = pixel.opacity || 0.6;
+                        ctx.fillRect(point.x - size/2, point.y - size/2, size, size);
+                    }
+                });
+            } else {
+                // Для малых зумов рисуем обобщенное представление
+                const point = this.latLngToTilePixel(cell.centerLat, cell.centerLng, coords, tileSize);
                 
-                // Прозрачность зависит от плотности
-                const opacity = Math.min(0.9, 0.3 + (cell.pixels.length / 50));
-                
-                // Рисуем круг или квадрат в зависимости от зума
-                ctx.fillStyle = cell.dominantColor;
-                ctx.globalAlpha = opacity;
-                
-                if (zoom <= 3) {
-                    // Круги для очень малых зумов
-                    ctx.beginPath();
-                    ctx.arc(point.x, point.y, size, 0, Math.PI * 2);
-                    ctx.fill();
-                } else {
-                    // Квадраты для средних малых зумов
-                    ctx.fillRect(point.x - size/2, point.y - size/2, size, size);
+                if (point) {
+                    // Размер зависит от количества пикселей и зума
+                    const baseSize = Math.min(15, 3 + Math.sqrt(cell.pixels.length * 2));
+                    const size = zoom <= 2 ? baseSize * 0.8 : zoom <= 3 ? baseSize : baseSize * 1.2;
+                    
+                    // Прозрачность зависит от плотности
+                    const opacity = Math.min(0.9, 0.4 + (cell.pixels.length / 30));
+                    
+                    ctx.fillStyle = cell.dominantColor;
+                    ctx.globalAlpha = opacity;
+                    
+                    if (zoom <= 2) {
+                        // Круги для очень малых зумов
+                        ctx.beginPath();
+                        ctx.arc(point.x, point.y, size, 0, Math.PI * 2);
+                        ctx.fill();
+                    } else {
+                        // Квадраты для средних зумов
+                        ctx.fillRect(point.x - size/2, point.y - size/2, size, size);
+                    }
                 }
             }
         });
@@ -409,6 +422,8 @@ class PixelBattleMap {
         const pixelLng = Math.floor(latlng.lng / this.PIXEL_SIZE_LAT) * this.PIXEL_SIZE_LAT;
         const pixelKey = `${pixelLat.toFixed(4)},${pixelLng.toFixed(4)}`;
         
+        console.log(`Размещение пикселя: ${pixelKey}, цвет: ${this.selectedColor}`);
+        
         // Создаем данные пикселя
         const pixelData = {
             color: this.selectedColor,
@@ -417,23 +432,28 @@ class PixelBattleMap {
             timestamp: Date.now()
         };
         
-        // Сохраняем локально
+        // Сохраняем локально (перезаписываем если уже есть)
         this.pixels.set(pixelKey, pixelData);
         
         // Добавляем в батч для отправки на сервер
         this.pendingPixels.set(pixelKey, pixelData);
         
-        // Перерисовываем слой
-        this.pixelLayerInstance.redraw();
+        // Немедленно перерисовываем слой
+        if (this.pixelLayerInstance) {
+            this.pixelLayerInstance.redraw();
+        }
         
         // Обновляем статистику
         this.updateStats();
         
-        // Запускаем батч таймер
+        // Запускаем батч таймер (отправка на сервер)
         this.scheduleBatch();
         
-        // Визуальный эффект
+        // Визуальный эффект подтверждения
         this.showPlaceEffect(latlng);
+        
+        // Сохраняем локально в localStorage для персистентности
+        this.saveLocalPixels();
     }
     
     showPlaceEffect(latlng) {
@@ -580,6 +600,11 @@ class PixelBattleMap {
             if (response.ok) {
                 const data = await response.json();
                 console.log('Пиксели отправлены:', data);
+                
+                // Запускаем синхронизацию через 2 секунды после отправки
+                setTimeout(() => {
+                    this.syncWithServer();
+                }, 2000);
             }
         } catch (error) {
             console.error('Ошибка отправки пикселей:', error);
@@ -595,26 +620,60 @@ class PixelBattleMap {
         if (this.isSyncing) return;
         this.isSyncing = true;
         
+        // Показываем индикатор синхронизации
+        const syncStatus = document.getElementById('syncStatus');
+        if (syncStatus) {
+            syncStatus.style.display = 'block';
+            syncStatus.textContent = '🔄 Синхронизация...';
+        }
+        
         try {
             const response = await fetch('/api/pixels-state');
             if (response.ok) {
                 const data = await response.json();
                 
                 if (data.pixels && Array.isArray(data.pixels)) {
-                    let newPixels = 0;
+                    let changedPixels = 0;
+                    let updatedPixels = 0;
+                    let skippedPixels = 0;
+                    
+                    // НЕ очищаем существующие пиксели! Обновляем и добавляем новые
                     data.pixels.forEach(pixel => {
-                        if (!this.pixels.has(pixel.position)) {
+                        // Проверяем полноту данных
+                        if (!pixel.position || !pixel.color || pixel.opacity === undefined) {
+                            console.warn('Пропущен пиксель с неполными данными:', pixel);
+                            skippedPixels++;
+                            return;
+                        }
+                        
+                        const existingPixel = this.pixels.get(pixel.position);
+                        
+                        // Проверяем, изменился ли пиксель
+                        if (!existingPixel || 
+                            existingPixel.color !== pixel.color || 
+                            existingPixel.opacity !== pixel.opacity) {
+                            
                             this.pixels.set(pixel.position, {
                                 color: pixel.color,
-                                opacity: pixel.opacity,
-                                playerId: pixel.playerId
+                                opacity: pixel.opacity || 0.6,
+                                playerId: pixel.playerId || 'unknown'
                             });
-                            newPixels++;
+                            
+                            if (existingPixel) {
+                                updatedPixels++;
+                            } else {
+                                changedPixels++;
+                            }
                         }
                     });
                     
-                    if (newPixels > 0) {
-                        this.pixelLayerInstance.redraw();
+                    if (changedPixels > 0 || updatedPixels > 0) {
+                        console.log(`Синхронизация: ${changedPixels} новых, ${updatedPixels} обновленных пикселей`);
+                        
+                        // Перерисовываем только если есть изменения
+                        if (this.pixelLayerInstance) {
+                            this.pixelLayerInstance.redraw();
+                        }
                     }
                 }
                 
@@ -627,11 +686,33 @@ class PixelBattleMap {
             console.error('Ошибка синхронизации:', error);
         } finally {
             this.isSyncing = false;
+            
+            // Скрываем индикатор синхронизации
+            const syncStatus = document.getElementById('syncStatus');
+            if (syncStatus) {
+                setTimeout(() => {
+                    syncStatus.style.display = 'none';
+                }, 1000);
+            }
         }
     }
     
     startPeriodicSync() {
         this.syncInterval = setInterval(() => this.syncWithServer(), this.syncDelay);
+        
+        // Синхронизация при возвращении на вкладку
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                console.log('Вкладка активна, синхронизируем...');
+                this.syncWithServer();
+            }
+        });
+        
+        // Синхронизация при фокусе окна
+        window.addEventListener('focus', () => {
+            console.log('Окно в фокусе, синхронизируем...');
+            this.syncWithServer();
+        });
     }
     
     loadLocalPixels() {
@@ -693,9 +774,14 @@ class PixelBattleMap {
         if (!container) return;
         
         container.innerHTML = colors.map((color, index) => {
-            // Формируем список захваченных стран
+            // Формируем список захваченных стран с правильными процентами
             const countriesText = color.countries && color.countries.length > 0
-                ? color.countries.map(c => `${c.name} (${c.percentage}%)`).join(', ')
+                ? color.countries.map(c => {
+                    // Используем отформатированный процент с сервера
+                    const percentDisplay = c.percentageFormatted || 
+                        (c.percentage < 0.01 ? `${c.percentage.toFixed(6)}%` : `${c.percentage.toFixed(2)}%`);
+                    return `${c.name} (${percentDisplay})`;
+                }).join(', ')
                 : 'Нет захватов';
             
             return `

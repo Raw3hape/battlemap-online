@@ -1,6 +1,7 @@
 // API endpoint: Получение состояния всех пикселей
 import { Redis } from '@upstash/redis';
 import { countryNames } from './pixels-batch-geo.js';
+import { calculateCountryFillPercentage } from './country-areas.js';
 
 const redis = new Redis({
     url: process.env.KV_REST_API_URL,
@@ -75,21 +76,23 @@ export default async function handler(req, res) {
                 };
             }
             
-            const countryTotal = parseInt(countryTotals[countryCode] || 0);
             const colorCount = parseInt(count);
-            const percentage = countryTotal > 0 ? Math.round((colorCount / countryTotal) * 100) : 0;
+            // Используем правильный расчет процентов от общей площади страны
+            const percentage = calculateCountryFillPercentage(colorCount, countryCode);
             
             territoryStats[colorName].totalPixels += colorCount;
             territoryStats[colorName].countries.push({
                 name: countryName,
+                code: countryCode,
                 pixels: colorCount,
-                percentage: percentage
+                percentage: percentage,
+                percentageFormatted: percentage < 0.01 ? `${percentage.toFixed(6)}%` : `${percentage.toFixed(2)}%`
             });
         });
         
-        // Сортируем страны по количеству пикселей
+        // Сортируем страны по проценту заполнения (не по количеству пикселей!)
         Object.values(territoryStats).forEach(stat => {
-            stat.countries.sort((a, b) => b.pixels - a.pixels);
+            stat.countries.sort((a, b) => b.percentage - a.percentage);
             stat.countries = stat.countries.slice(0, 5); // Топ 5 стран для каждого цвета
         });
         
@@ -115,8 +118,8 @@ export default async function handler(req, res) {
             }
         });
         
-        // Ограничиваем количество пикселей для больших карт
-        const maxPixelsToSend = 10000;
+        // Увеличиваем лимит для лучшей синхронизации
+        const maxPixelsToSend = 50000; // Увеличено с 10000
         const pixelsToSend = pixels.length > maxPixelsToSend ? 
             pixels.slice(-maxPixelsToSend) : // Берем последние
             pixels;

@@ -19,8 +19,10 @@ class StableBattleMap {
         
         // Состояние
         this.revealedCells = new Set();
+        this.cellColors = new Map(); // Хранение цветов для каждой клетки
         this.showGrid = true;
         this.currentZoom = 5;
+        this.colorPalette = this.generateColorPalette();
         
         // ID игрока
         this.playerId = this.getOrCreatePlayerId();
@@ -57,6 +59,31 @@ class StableBattleMap {
         this.drawingEnabled = false;
         
         this.init();
+    }
+    
+    // Генерация палитры цветов для клеток
+    generateColorPalette() {
+        return [
+            '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7',
+            '#DDA0DD', '#98D8C8', '#FFD700', '#FF69B4', '#00CED1',
+            '#FF7F50', '#6495ED', '#DC143C', '#00FA9A', '#FFB6C1',
+            '#F4A460', '#DA70D6', '#32CD32', '#FF1493', '#1E90FF'
+        ];
+    }
+    
+    // Получение цвета для клетки (детерминированный по координатам)
+    getCellColor(cellKey) {
+        if (this.cellColors.has(cellKey)) {
+            return this.cellColors.get(cellKey);
+        }
+        
+        // Генерируем цвет на основе координат для консистентности
+        const [lat, lng] = cellKey.split(',').map(parseFloat);
+        const index = Math.abs(Math.floor(lat * 100 + lng * 100)) % this.colorPalette.length;
+        const color = this.colorPalette[index];
+        
+        this.cellColors.set(cellKey, color);
+        return color;
     }
     
     // ======= ИНИЦИАЛИЗАЦИЯ =======
@@ -424,37 +451,46 @@ class StableBattleMap {
                 const startLng = Math.floor(bounds.getWest() / this.CELL_SIZE_LAT) * this.CELL_SIZE_LAT;
                 const endLng = Math.ceil(bounds.getEast() / this.CELL_SIZE_LAT) * this.CELL_SIZE_LAT;
                 
-                // Туман
-                const fogColor = this.theme === 'dark' ? 
-                    'rgba(255, 255, 255, 0.85)' : 
-                    'rgba(0, 0, 0, 0.3)';
-                
-                this.fogCtx.fillStyle = fogColor;
-                this.fogCtx.beginPath();
-                
                 let cellCount = 0;
                 const maxCells = 1000; // Ограничение для производительности
                 
+                // Рисуем раскрытые клетки цветными пикселями
                 for (let lat = startLat; lat <= endLat && cellCount < maxCells; lat += this.CELL_SIZE_LAT) {
                     for (let lng = startLng; lng <= endLng && cellCount < maxCells; lng += this.CELL_SIZE_LAT) {
                         const cellKey = `${lat.toFixed(4)},${lng.toFixed(4)}`;
                         
-                        if (!this.revealedCells.has(cellKey)) {
+                        if (this.revealedCells.has(cellKey)) {
                             const nw = this.map.latLngToContainerPoint([lat + this.CELL_SIZE_LAT, lng]);
                             const se = this.map.latLngToContainerPoint([lat, lng + this.CELL_SIZE_LAT]);
                             
-                            this.fogCtx.rect(
+                            // Получаем цвет для клетки
+                            const color = this.getCellColor(cellKey);
+                            
+                            // Рисуем цветной пиксель с прозрачностью
+                            this.fogCtx.fillStyle = color + '80'; // 50% прозрачность
+                            this.fogCtx.fillRect(
                                 Math.floor(nw.x),
                                 Math.floor(nw.y),
                                 Math.ceil(se.x - nw.x),
                                 Math.ceil(se.y - nw.y)
                             );
+                            
+                            // Добавляем границу для лучшей видимости на высоком зуме
+                            if (this.currentZoom >= 8) {
+                                this.fogCtx.strokeStyle = color;
+                                this.fogCtx.lineWidth = 1;
+                                this.fogCtx.strokeRect(
+                                    Math.floor(nw.x),
+                                    Math.floor(nw.y),
+                                    Math.ceil(se.x - nw.x),
+                                    Math.ceil(se.y - nw.y)
+                                );
+                            }
+                            
                             cellCount++;
                         }
                     }
                 }
-                
-                this.fogCtx.fill();
                 
                 // Сетка (только при высоком зуме)
                 if (this.showGrid && this.currentZoom >= 10) {
@@ -526,11 +562,14 @@ class StableBattleMap {
                     cells.forEach(cell => {
                         if (!this.revealedCells.has(cell)) {
                             this.revealedCells.add(cell);
+                            // Генерируем цвет для новой клетки
+                            this.getCellColor(cell);
                             newCells++;
                         }
                     });
                     
                     if (newCells > 0) {
+                        console.log(`Синхронизировано ${newCells} новых клеток`);
                         this.scheduleRender();
                     }
                 }
