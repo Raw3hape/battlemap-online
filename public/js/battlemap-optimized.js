@@ -399,14 +399,16 @@ class OptimizedBattleMap {
         this.fogCtx.save();
         this.gridCtx.save();
         
-        // ВАЖНО: Заливаем весь канвас цветом тумана сначала
+        // КРИТИЧНО: Сначала полностью очищаем канвас для прозрачности
+        this.fogCtx.clearRect(0, 0, width, height);
+        
+        // ВАЖНО: Заливаем весь канвас цветом тумана
         const fogColor = this.theme === 'dark' ? 
             'rgba(255, 255, 255, 0.8)' : 
             'rgba(0, 0, 0, 0.8)';
         
-        // Сброс композиции и стилей
+        // Устанавливаем композицию и стили
         this.fogCtx.globalCompositeOperation = 'source-over';
-        this.fogCtx.globalAlpha = 1.0;
         this.fogCtx.fillStyle = fogColor;
         this.fogCtx.fillRect(0, 0, width, height);
         
