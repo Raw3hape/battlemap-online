@@ -574,7 +574,12 @@
                 if (response.ok) {
                     // Очищаем локальные данные
                     battleMap.pixels.clear();
-                    battleMap.renderAllTiles();
+                    localStorage.removeItem('battleMapPixels');
+                    
+                    // Перерисовываем слой пикселей
+                    if (battleMap.pixelLayerInstance) {
+                        battleMap.pixelLayerInstance.redraw();
+                    }
                     battleMap.showSyncStatus('✅ Все пиксели удалены', 'success');
                     
                     // Перезагружаем данные
