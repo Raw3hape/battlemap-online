@@ -68,13 +68,18 @@ class OptimizedBattleMap {
         this.setupInteraction();
         this.applyTheme(this.theme);
         
-        setTimeout(() => {
+        // Первый рендер сразу после инициализации карты
+        this.map.whenReady(() => {
             this.resizeCanvas();
             this.loadProgress();
+            // Двойной рендер для надежности
             this.renderImmediate();
-            this.startOnlineSync();
-            this.updateUIState();
-        }, 100);
+            setTimeout(() => {
+                this.renderImmediate();
+                this.startOnlineSync();
+                this.updateUIState();
+            }, 250);
+        });
     }
     
     initMap() {
@@ -318,18 +323,36 @@ class OptimizedBattleMap {
     }
     
     renderImmediate() {
+        // Проверка готовности карты
+        if (!this.map || !this.fogCanvas || !this.gridCanvas) {
+            console.log('Map or canvas not ready');
+            return;
+        }
+        
         const bounds = this.map.getBounds();
         const zoom = this.map.getZoom();
         
-        // Очистка с заливкой фоном для устранения артефактов
+        // Проверка валидности размеров
         const width = this.fogCanvas.width;
         const height = this.fogCanvas.height;
+        
+        if (width === 0 || height === 0) {
+            console.log('Canvas has zero dimensions');
+            return;
+        }
+        
+        // Сохраняем состояние контекста
+        this.fogCtx.save();
+        this.gridCtx.save();
         
         // ВАЖНО: Заливаем весь канвас цветом тумана сначала
         const fogColor = this.theme === 'dark' ? 
             'rgba(255, 255, 255, 0.8)' : 
             'rgba(0, 0, 0, 0.8)';
         
+        // Сброс композиции и стилей
+        this.fogCtx.globalCompositeOperation = 'source-over';
+        this.fogCtx.globalAlpha = 1.0;
         this.fogCtx.fillStyle = fogColor;
         this.fogCtx.fillRect(0, 0, width, height);
         
@@ -418,6 +441,10 @@ class OptimizedBattleMap {
         if (this.showGrid && zoom >= 10) {
             this.drawGrid(startLat, endLat, startLng, endLng);
         }
+        
+        // Восстанавливаем состояние контекстов
+        this.fogCtx.restore();
+        this.gridCtx.restore();
     }
     
     drawGrid(startLat, endLat, startLng, endLng) {
@@ -632,6 +659,11 @@ class OptimizedBattleMap {
         this.fogCanvas.height = window.innerHeight;
         this.gridCanvas.width = window.innerWidth;
         this.gridCanvas.height = window.innerHeight;
+        
+        // Важно: сразу после изменения размера нужно перерисовать
+        if (this.map) {
+            this.renderImmediate();
+        }
     }
     
     applyTheme(theme) {
