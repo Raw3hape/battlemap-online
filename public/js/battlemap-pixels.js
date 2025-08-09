@@ -134,11 +134,16 @@ class PixelBattleMap {
         const nwPoint = this.getTileLatLng(tileX, tileY, zoom);
         const sePoint = this.getTileLatLng(tileX + 1, tileY + 1, zoom);
         
-        // ИСПРАВЛЕНО: Не увеличиваем размер пикселей, только уменьшаем детализацию
-        // На малых зумах показываем точки вместо квадратов
         const effectivePixelSize = this.PIXEL_SIZE_LAT;
         
-        // Рендерим пиксели в пределах тайла
+        // На очень малых зумах сначала считаем плотность пикселей
+        if (zoom <= 5) {
+            const densityMap = this.calculatePixelDensity(nwPoint, sePoint, zoom);
+            this.renderWithDensity(ctx, coords, tileSize, densityMap, zoom);
+            return;
+        }
+        
+        // Для средних и больших зумов - обычный рендеринг
         const startLat = Math.floor(sePoint.lat / effectivePixelSize) * effectivePixelSize;
         const endLat = Math.ceil(nwPoint.lat / effectivePixelSize) * effectivePixelSize;
         const startLng = Math.floor(nwPoint.lng / effectivePixelSize) * effectivePixelSize;
@@ -157,20 +162,8 @@ class PixelBattleMap {
                         const width = Math.abs(point2.x - point1.x);
                         const height = Math.abs(point2.y - point1.y);
                         
-                        // На малых зумах рисуем точки, на больших - квадраты
-                        if (zoom <= 4) {
-                            // Точка фиксированного размера
-                            const dotSize = 2;
-                            const centerX = point1.x + width / 2;
-                            const centerY = point1.y + height / 2;
-                            
-                            ctx.fillStyle = pixelData.color;
-                            ctx.globalAlpha = Math.min(1, pixelData.opacity + 0.3); // Увеличиваем видимость
-                            ctx.beginPath();
-                            ctx.arc(centerX, centerY, dotSize, 0, Math.PI * 2);
-                            ctx.fill();
-                        } else if (zoom <= 7) {
-                            // Маленькие квадраты
+                        // Средние зумы - маленькие квадраты
+                        if (zoom <= 7) {
                             ctx.fillStyle = pixelData.color;
                             ctx.globalAlpha = pixelData.opacity;
                             const size = Math.min(width, height, 8);
@@ -206,6 +199,102 @@ class PixelBattleMap {
             return this.pixels.get(key);
         }
         return null;
+    }
+    
+    // Расчет плотности пикселей для области
+    calculatePixelDensity(nwPoint, sePoint, zoom) {
+        const densityMap = new Map();
+        
+        // Размер ячейки для группировки в градусах
+        // Чем меньше зум, тем больше ячейка
+        const cellSize = zoom <= 2 ? 5 : zoom <= 3 ? 2 : zoom <= 4 ? 1 : 0.5;
+        
+        // Минимальное количество пикселей для отображения
+        const minPixelsForVisibility = zoom <= 2 ? 25 : zoom <= 3 ? 15 : zoom <= 4 ? 8 : 3;
+        
+        // Проходим по всем пикселям и группируем их
+        this.pixels.forEach((pixelData, key) => {
+            const [lat, lng] = key.split(',').map(Number);
+            
+            // Проверяем, попадает ли пиксель в видимую область
+            if (lat >= sePoint.lat && lat <= nwPoint.lat && 
+                lng >= nwPoint.lng && lng <= sePoint.lng) {
+                
+                // Определяем ячейку для группировки
+                const cellLat = Math.floor(lat / cellSize) * cellSize;
+                const cellLng = Math.floor(lng / cellSize) * cellSize;
+                const cellKey = `${cellLat},${cellLng}`;
+                
+                if (!densityMap.has(cellKey)) {
+                    densityMap.set(cellKey, {
+                        pixels: [],
+                        colors: new Map(),
+                        centerLat: cellLat + cellSize / 2,
+                        centerLng: cellLng + cellSize / 2
+                    });
+                }
+                
+                const cell = densityMap.get(cellKey);
+                cell.pixels.push({ lat, lng, ...pixelData });
+                
+                // Считаем цвета
+                const colorCount = cell.colors.get(pixelData.color) || 0;
+                cell.colors.set(pixelData.color, colorCount + 1);
+            }
+        });
+        
+        // Фильтруем ячейки с недостаточным количеством пикселей
+        const filteredMap = new Map();
+        densityMap.forEach((cell, key) => {
+            if (cell.pixels.length >= minPixelsForVisibility) {
+                // Определяем доминирующий цвет
+                let dominantColor = null;
+                let maxCount = 0;
+                cell.colors.forEach((count, color) => {
+                    if (count > maxCount) {
+                        maxCount = count;
+                        dominantColor = color;
+                    }
+                });
+                cell.dominantColor = dominantColor;
+                filteredMap.set(key, cell);
+            }
+        });
+        
+        return filteredMap;
+    }
+    
+    // Рендеринг с учетом плотности
+    renderWithDensity(ctx, coords, tileSize, densityMap, zoom) {
+        densityMap.forEach(cell => {
+            // Конвертируем центр ячейки в координаты тайла
+            const point = this.latLngToTilePixel(cell.centerLat, cell.centerLng, coords, tileSize);
+            
+            if (point) {
+                // Размер отображения зависит от количества пикселей и зума
+                const baseSize = Math.min(10, 2 + Math.sqrt(cell.pixels.length));
+                const size = zoom <= 2 ? baseSize * 0.5 : zoom <= 3 ? baseSize * 0.7 : baseSize;
+                
+                // Прозрачность зависит от плотности
+                const opacity = Math.min(0.9, 0.3 + (cell.pixels.length / 50));
+                
+                // Рисуем круг или квадрат в зависимости от зума
+                ctx.fillStyle = cell.dominantColor;
+                ctx.globalAlpha = opacity;
+                
+                if (zoom <= 3) {
+                    // Круги для очень малых зумов
+                    ctx.beginPath();
+                    ctx.arc(point.x, point.y, size, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    // Квадраты для средних малых зумов
+                    ctx.fillRect(point.x - size/2, point.y - size/2, size, size);
+                }
+            }
+        });
+        
+        ctx.globalAlpha = 1;
     }
     
     getTileLatLng(tileX, tileY, zoom) {
