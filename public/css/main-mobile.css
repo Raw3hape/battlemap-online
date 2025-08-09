@@ -82,7 +82,7 @@ input, select, textarea {
 
 #gridCanvas {
     z-index: 3;
-    pointer-events: auto;
+    pointer-events: none;
 }
 
 /* UI Контейнер */

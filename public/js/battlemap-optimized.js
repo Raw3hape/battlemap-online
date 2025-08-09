@@ -56,6 +56,7 @@ class OptimizedBattleMap {
         
         // Рендер кэш для производительности
         this.renderRequested = false;
+        this.firstRenderComplete = false;
         
         this.init();
     }
@@ -68,17 +69,40 @@ class OptimizedBattleMap {
         this.setupInteraction();
         this.applyTheme(this.theme);
         
-        // Первый рендер сразу после инициализации карты
-        this.map.whenReady(() => {
+        // Инициализация после готовности карты
+        this.map.whenReady(async () => {
             this.resizeCanvas();
+            
+            // Сначала загружаем локальный прогресс
             this.loadProgress();
-            // Двойной рендер для надежности
+            
+            // Показываем индикатор загрузки
+            const syncStatus = document.getElementById('syncStatus');
+            if (syncStatus) {
+                syncStatus.textContent = 'Загрузка карты...';
+                syncStatus.classList.add('show');
+            }
+            
+            // Пытаемся синхронизироваться с сервером
+            try {
+                await this.syncWithServer();
+            } catch (error) {
+                console.log('Не удалось загрузить данные с сервера, используем локальные');
+            }
+            
+            // Если есть хоть какие-то данные (локальные или с сервера), рендерим
+            // Если данных нет вообще, всё равно рендерим (пустая карта)
+            this.firstRenderComplete = true; // Разрешаем рендер
             this.renderImmediate();
-            setTimeout(() => {
-                this.renderImmediate();
-                this.startOnlineSync();
-                this.updateUIState();
-            }, 250);
+            
+            // Скрываем индикатор
+            if (syncStatus) {
+                setTimeout(() => syncStatus.classList.remove('show'), 500);
+            }
+            
+            // Запускаем периодическую синхронизацию
+            this.startOnlineSync();
+            this.updateUIState();
         });
     }
     
@@ -341,6 +365,12 @@ class OptimizedBattleMap {
             return;
         }
         
+        // Не рендерим если данные еще не загружены при первом запуске
+        if (this.revealedCells.size === 0 && !this.firstRenderComplete) {
+            console.log('Waiting for data before first render');
+            return;
+        }
+        
         const bounds = this.map.getBounds();
         const zoom = this.map.getZoom();
         
@@ -457,6 +487,9 @@ class OptimizedBattleMap {
         // Восстанавливаем состояние контекстов
         this.fogCtx.restore();
         this.gridCtx.restore();
+        
+        // Помечаем что первый рендер выполнен
+        this.firstRenderComplete = true;
     }
     
     drawGrid(startLat, endLat, startLng, endLng) {
