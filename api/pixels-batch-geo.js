@@ -162,6 +162,7 @@ export default async function handler(req, res) {
             const countryCode = getCountryCode(lat, lng);
             
             const pixelData = {
+                position: pixel.position,  // ВАЖНО: добавляем position в данные!
                 color: pixel.color,
                 opacity: pixel.opacity || 0.6,
                 playerId: playerId || 'anonymous',

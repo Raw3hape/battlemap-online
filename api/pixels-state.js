@@ -44,13 +44,18 @@ export default async function handler(req, res) {
         const pixels = Object.entries(pixelsMap).map(([position, dataStr]) => {
             try {
                 const data = JSON.parse(dataStr);
-                return {
-                    position,
-                    color: data.color,
-                    opacity: data.opacity,
-                    playerId: data.playerId
-                };
+                // Проверяем, что это валидные данные пикселя
+                if (data.color && data.opacity !== undefined) {
+                    return {
+                        position: data.position || position,  // Используем position из данных или ключа
+                        color: data.color,
+                        opacity: data.opacity,
+                        playerId: data.playerId || 'unknown'
+                    };
+                }
+                return null;
             } catch (e) {
+                console.error('Ошибка парсинга пикселя:', position, e);
                 return null;
             }
         }).filter(p => p !== null);
