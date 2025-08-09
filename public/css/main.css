@@ -73,7 +73,7 @@ input, select, textarea {
     left: 0;
     width: 100vw;
     height: 100vh;
-    pointer-events: none;
+    pointer-events: none; /* Оба канваса не блокируют события */
 }
 
 #fogCanvas {
@@ -82,7 +82,7 @@ input, select, textarea {
 
 #gridCanvas {
     z-index: 3;
-    pointer-events: auto;
+    /* УБРАЛ pointer-events: auto - это была проблема! */
 }
 
 /* UI Контейнер */
