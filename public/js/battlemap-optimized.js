@@ -327,8 +327,8 @@ class OptimizedBattleMap {
         
         // ВАЖНО: Заливаем весь канвас цветом тумана сначала
         const fogColor = this.theme === 'dark' ? 
-            'rgba(255, 255, 255, 0.85)' : 
-            'rgba(0, 0, 0, 0.3)';
+            'rgba(255, 255, 255, 0.8)' : 
+            'rgba(0, 0, 0, 0.8)';
         
         this.fogCtx.fillStyle = fogColor;
         this.fogCtx.fillRect(0, 0, width, height);
@@ -348,7 +348,7 @@ class OptimizedBattleMap {
         // Цвет hover
         const hoverColor = this.theme === 'dark' ? 
             'rgba(255, 255, 255, 0.6)' : 
-            'rgba(0, 0, 0, 0.2)';
+            'rgba(0, 0, 0, 0.6)';
         
         // Лимиты для производительности
         const maxCells = zoom <= 5 ? 20000 : (this.isMobile ? 3000 : 8000);
