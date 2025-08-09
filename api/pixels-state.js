@@ -41,35 +41,42 @@ export default async function handler(req, res) {
         const pixelsMap = await redis.hgetall('pixels:map') || {};
         
         // Преобразуем в массив с надежной обработкой ошибок
-        const pixels = Object.entries(pixelsMap).map(([position, dataStr]) => {
+        const pixels = Object.entries(pixelsMap).map(([position, data]) => {
             try {
-                // Пропускаем пустые или невалидные строки
-                if (!dataStr || typeof dataStr !== 'string' || dataStr.length < 2) {
-                    return null;
-                }
-                
                 // Пропускаем служебные ключи и числовые позиции (старый формат)
                 if (position === 'initialized' || /^\d+$/.test(position)) {
                     return null;
                 }
                 
-                const data = JSON.parse(dataStr);
+                // Upstash может вернуть как строку, так и уже распарсенный объект
+                let pixelData = data;
+                
+                // Если это строка, пробуем распарсить
+                if (typeof data === 'string') {
+                    // Пропускаем пустые или слишком короткие строки
+                    if (!data || data.length < 2) {
+                        return null;
+                    }
+                    try {
+                        pixelData = JSON.parse(data);
+                    } catch (e) {
+                        return null;
+                    }
+                }
                 
                 // Проверяем, что это объект с нужными полями
-                if (typeof data === 'object' && data.color && data.opacity !== undefined) {
+                if (typeof pixelData === 'object' && pixelData && 
+                    pixelData.color && pixelData.opacity !== undefined) {
                     return {
-                        position: data.position || position,  // Используем position из данных или ключа
-                        color: data.color,
-                        opacity: data.opacity,
-                        playerId: data.playerId || 'unknown'
+                        position: pixelData.position || position,  // Используем position из данных или ключа
+                        color: pixelData.color,
+                        opacity: pixelData.opacity,
+                        playerId: pixelData.playerId || 'unknown'
                     };
                 }
                 return null;
             } catch (e) {
-                // Логируем только если это не ожидаемые ошибки
-                if (!dataStr.includes('initialized') && position !== '2' && position !== '7' && position !== '10') {
-                    console.error('Пропущен невалидный пиксель:', position, dataStr?.substring(0, 50));
-                }
+                // Тихо пропускаем ошибки
                 return null;
             }
         }).filter(p => p !== null);
