@@ -3,7 +3,7 @@
   "outputDirectory": ".",
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },
-    { "source": "/", "destination": "/battlemap-online.html" }
+    { "source": "/", "destination": "/battlemap-pixels-v2.html" }
   ],
   "functions": {
     "api/*.js": {

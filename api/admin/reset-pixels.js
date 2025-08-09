@@ -22,9 +22,11 @@ export default async function handler(req, res) {
         return res.status(405).json({ error: 'Method not allowed' });
     }
     
-    // Простая защита паролем
+    // Простая защита паролем (теперь публичный пароль)
     const { password } = req.body;
-    if (password !== 'reset2024pixels') {
+    // Два пароля: старый для совместимости и новый публичный
+    const validPasswords = ['reset2024pixels', 'public_reset_2024'];
+    if (!validPasswords.includes(password)) {
         return res.status(401).json({ error: 'Unauthorized' });
     }
     
