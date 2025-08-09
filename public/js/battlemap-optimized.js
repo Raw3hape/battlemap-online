@@ -144,21 +144,33 @@ class OptimizedBattleMap {
         this.map.on('viewreset', requestRender);
         this.map.on('load', requestRender);
         
-        // Анимация зума
+        // Обработка зума без анимации канваса
+        let zoomAnimating = false;
+        
+        this.map.on('zoomstart', () => {
+            zoomAnimating = true;
+            // Быстро перерисовываем в начале зума
+            this.renderImmediate();
+        });
+        
         this.map.on('zoomanim', (e) => {
-            const scale = this.map.getZoomScale(e.zoom);
-            const offset = this.map._getCenterOffset(e.center)._multiplyBy(-scale)._add(this.map._getMapPanePos());
-            
-            const transform = L.DomUtil.TRANSFORM;
-            this.fogCanvas.style[transform] = `translate3d(${offset.x}px, ${offset.y}px, 0) scale(${scale})`;
-            this.gridCanvas.style[transform] = `translate3d(${offset.x}px, ${offset.y}px, 0) scale(${scale})`;
+            // Обновляем зум для корректного рендера
+            this.currentZoom = e.zoom;
+            // Частые перерисовки во время анимации
+            if (!this.renderRequested) {
+                this.renderRequested = true;
+                requestAnimationFrame(() => {
+                    this.renderImmediate();
+                    this.renderRequested = false;
+                });
+            }
         });
         
         // Конец зума
         this.map.on('zoomend', () => {
-            this.fogCanvas.style.transform = '';
-            this.gridCanvas.style.transform = '';
+            zoomAnimating = false;
             this.currentZoom = this.map.getZoom();
+            // Финальный рендер после зума
             this.renderImmediate();
             document.getElementById('zoomLevel').textContent = this.currentZoom;
         });
@@ -789,6 +801,11 @@ style.textContent = `
     
     #fogCanvas, #gridCanvas {
         pointer-events: none !important;
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
         transform-origin: top left;
         will-change: transform;
         image-rendering: pixelated;
