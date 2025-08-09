@@ -134,9 +134,9 @@ class PixelBattleMap {
         const nwPoint = this.getTileLatLng(tileX, tileY, zoom);
         const sePoint = this.getTileLatLng(tileX + 1, tileY + 1, zoom);
         
-        // Определяем размер пикселя в зависимости от зума
-        const pixelSizeMultiplier = Math.max(1, Math.pow(2, Math.max(0, 8 - zoom)));
-        const effectivePixelSize = this.PIXEL_SIZE_LAT * pixelSizeMultiplier;
+        // ИСПРАВЛЕНО: Не увеличиваем размер пикселей, только уменьшаем детализацию
+        // На малых зумах показываем точки вместо квадратов
+        const effectivePixelSize = this.PIXEL_SIZE_LAT;
         
         // Рендерим пиксели в пределах тайла
         const startLat = Math.floor(sePoint.lat / effectivePixelSize) * effectivePixelSize;
@@ -157,17 +157,39 @@ class PixelBattleMap {
                         const width = Math.abs(point2.x - point1.x);
                         const height = Math.abs(point2.y - point1.y);
                         
-                        // Рисуем пиксель
-                        ctx.fillStyle = pixelData.color;
-                        ctx.globalAlpha = pixelData.opacity;
-                        ctx.fillRect(point1.x, point1.y, width, height);
-                        
-                        // Рисуем границу для четкости
-                        if (zoom >= 8) {
-                            ctx.globalAlpha = 1;
-                            ctx.strokeStyle = pixelData.color;
-                            ctx.lineWidth = 0.5;
-                            ctx.strokeRect(point1.x, point1.y, width, height);
+                        // На малых зумах рисуем точки, на больших - квадраты
+                        if (zoom <= 4) {
+                            // Точка фиксированного размера
+                            const dotSize = 2;
+                            const centerX = point1.x + width / 2;
+                            const centerY = point1.y + height / 2;
+                            
+                            ctx.fillStyle = pixelData.color;
+                            ctx.globalAlpha = Math.min(1, pixelData.opacity + 0.3); // Увеличиваем видимость
+                            ctx.beginPath();
+                            ctx.arc(centerX, centerY, dotSize, 0, Math.PI * 2);
+                            ctx.fill();
+                        } else if (zoom <= 7) {
+                            // Маленькие квадраты
+                            ctx.fillStyle = pixelData.color;
+                            ctx.globalAlpha = pixelData.opacity;
+                            const size = Math.min(width, height, 8);
+                            const centerX = point1.x + (width - size) / 2;
+                            const centerY = point1.y + (height - size) / 2;
+                            ctx.fillRect(centerX, centerY, size, size);
+                        } else {
+                            // Полноразмерные пиксели
+                            ctx.fillStyle = pixelData.color;
+                            ctx.globalAlpha = pixelData.opacity;
+                            ctx.fillRect(point1.x, point1.y, width, height);
+                            
+                            // Рисуем границу для четкости на высоких зумах
+                            if (zoom >= 10) {
+                                ctx.globalAlpha = 1;
+                                ctx.strokeStyle = pixelData.color;
+                                ctx.lineWidth = 0.5;
+                                ctx.strokeRect(point1.x, point1.y, width, height);
+                            }
                         }
                     }
                 }
@@ -178,27 +200,11 @@ class PixelBattleMap {
     }
     
     getPixelAt(lat, lng, size) {
-        // Проверяем точное совпадение
+        // Проверяем только точное совпадение - не группируем пиксели
         const key = `${lat.toFixed(4)},${lng.toFixed(4)}`;
         if (this.pixels.has(key)) {
             return this.pixels.get(key);
         }
-        
-        // Для низких зумов проверяем соседние пиксели
-        if (size > this.PIXEL_SIZE_LAT) {
-            const steps = Math.round(size / this.PIXEL_SIZE_LAT);
-            for (let dlat = 0; dlat < steps; dlat++) {
-                for (let dlng = 0; dlng < steps; dlng++) {
-                    const checkLat = lat + dlat * this.PIXEL_SIZE_LAT;
-                    const checkLng = lng + dlng * this.PIXEL_SIZE_LAT;
-                    const checkKey = `${checkLat.toFixed(4)},${checkLng.toFixed(4)}`;
-                    if (this.pixels.has(checkKey)) {
-                        return this.pixels.get(checkKey);
-                    }
-                }
-            }
-        }
-        
         return null;
     }
     
@@ -401,7 +407,8 @@ class PixelBattleMap {
         this.pendingPixels.clear();
         
         try {
-            const response = await fetch('/api/pixels-batch', {
+            // Используем новый API с определением стран
+            const response = await fetch('/api/pixels-batch-geo', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -525,12 +532,26 @@ class PixelBattleMap {
         const container = document.getElementById('countriesList');
         if (!container) return;
         
-        container.innerHTML = colors.map((color, index) => `
-            <div class="country-item">
-                <span>${index + 1}. <span style="display:inline-block;width:20px;height:20px;background:${color.hex};vertical-align:middle;border-radius:2px;"></span> ${color.name}</span>
-                <span class="country-cells">${color.count} пикселей</span>
-            </div>
-        `).join('');
+        container.innerHTML = colors.map((color, index) => {
+            // Формируем список захваченных стран
+            const countriesText = color.countries && color.countries.length > 0
+                ? color.countries.map(c => `${c.name} (${c.percentage}%)`).join(', ')
+                : 'Нет захватов';
+            
+            return `
+                <div class="country-item" style="margin-bottom: 8px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span>${index + 1}.</span>
+                        <span style="display:inline-block;width:20px;height:20px;background:${color.color};border-radius:2px;"></span>
+                        <span style="flex: 1;">
+                            <strong>${color.name}</strong>
+                            <div style="font-size: 10px; opacity: 0.8;">${color.totalPixels} пикселей</div>
+                            <div style="font-size: 9px; opacity: 0.6;">${countriesText}</div>
+                        </span>
+                    </div>
+                </div>
+            `;
+        }).join('');
     }
     
     getOrCreatePlayerId() {

@@ -1,5 +1,6 @@
 // API endpoint: Получение состояния всех пикселей
 import { Redis } from '@upstash/redis';
+import { countryNames } from './pixels-batch-geo.js';
 
 const redis = new Redis({
     url: process.env.KV_REST_API_URL,
@@ -53,15 +54,48 @@ export default async function handler(req, res) {
             }
         }).filter(p => p !== null);
         
-        // Получаем статистику по цветам
-        const colorCounts = await redis.hgetall('pixels:colors:count') || {};
-        const topColors = Object.entries(colorCounts)
-            .map(([color, count]) => ({
-                hex: color,
-                name: COLOR_NAMES[color] || 'Другой',
-                count: parseInt(count)
-            }))
-            .sort((a, b) => b.count - a.count)
+        // Получаем статистику по странам и цветам
+        const countryColorStats = await redis.hgetall('pixels:country:color') || {};
+        const countryTotals = await redis.hgetall('pixels:country:total') || {};
+        
+        // Формируем статистику захвата территорий
+        const territoryStats = {};
+        
+        Object.entries(countryColorStats).forEach(([key, count]) => {
+            const [countryCode, color] = key.split(':');
+            const countryName = countryNames[countryCode] || countryCode;
+            const colorName = COLOR_NAMES[color.toLowerCase()] || color;
+            
+            if (!territoryStats[colorName]) {
+                territoryStats[colorName] = {
+                    color: color,
+                    name: colorName,
+                    totalPixels: 0,
+                    countries: []
+                };
+            }
+            
+            const countryTotal = parseInt(countryTotals[countryCode] || 0);
+            const colorCount = parseInt(count);
+            const percentage = countryTotal > 0 ? Math.round((colorCount / countryTotal) * 100) : 0;
+            
+            territoryStats[colorName].totalPixels += colorCount;
+            territoryStats[colorName].countries.push({
+                name: countryName,
+                pixels: colorCount,
+                percentage: percentage
+            });
+        });
+        
+        // Сортируем страны по количеству пикселей
+        Object.values(territoryStats).forEach(stat => {
+            stat.countries.sort((a, b) => b.pixels - a.pixels);
+            stat.countries = stat.countries.slice(0, 5); // Топ 5 стран для каждого цвета
+        });
+        
+        // Конвертируем в массив и сортируем по общему количеству пикселей
+        const topColors = Object.values(territoryStats)
+            .sort((a, b) => b.totalPixels - a.totalPixels)
             .slice(0, 10);
         
         // Получаем общую статистику
