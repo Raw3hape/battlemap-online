@@ -6,6 +6,61 @@ const kv = new Redis({
   token: process.env.KV_REST_API_TOKEN,
 });
 
+// Маппинг кодов стран на названия с флагами (из reveal-batch.js)
+const countryNames = {
+    'RU': '🇷🇺 Россия',
+    'US': '🇺🇸 США',
+    'CA': '🇨🇦 Канада',
+    'BR': '🇧🇷 Бразилия',
+    'CN': '🇨🇳 Китай',
+    'AU': '🇦🇺 Австралия',
+    'IN': '🇮🇳 Индия',
+    'FR': '🇫🇷 Франция',
+    'DE': '🇩🇪 Германия',
+    'IT': '🇮🇹 Италия',
+    'ES': '🇪🇸 Испания',
+    'GB': '🇬🇧 Великобритания',
+    'JP': '🇯🇵 Япония',
+    'MX': '🇲🇽 Мексика',
+    'AR': '🇦🇷 Аргентина',
+    'NO': '🇳🇴 Норвегия',
+    'SE': '🇸🇪 Швеция',
+    'FI': '🇫🇮 Финляндия',
+    'DK': '🇩🇰 Дания',
+    'IS': '🇮🇸 Исландия',
+    'IE': '🇮🇪 Ирландия',
+    'PL': '🇵🇱 Польша',
+    'PT': '🇵🇹 Португалия',
+    'NL': '🇳🇱 Нидерланды',
+    'BE': '🇧🇪 Бельгия',
+    'CH': '🇨🇭 Швейцария',
+    'AT': '🇦🇹 Австрия',
+    'CZ': '🇨🇿 Чехия',
+    'UA': '🇺🇦 Украина',
+    'BY': '🇧🇾 Беларусь',
+    'LT': '🇱🇹 Литва',
+    'LV': '🇱🇻 Латвия',
+    'EE': '🇪🇪 Эстония',
+    'GR': '🇬🇷 Греция',
+    'TR': '🇹🇷 Турция',
+    'CL': '🇨🇱 Чили',
+    'KR': '🇰🇷 Южная Корея',
+    'ID': '🇮🇩 Индонезия',
+    'TH': '🇹🇭 Таиланд',
+    'VN': '🇻🇳 Вьетнам',
+    'KZ': '🇰🇿 Казахстан',
+    'MN': '🇲🇳 Монголия',
+    'IR': '🇮🇷 Иран',
+    'SA': '🇸🇦 Саудовская Аравия',
+    'EG': '🇪🇬 Египет',
+    'ZA': '🇿🇦 ЮАР',
+    'NG': '🇳🇬 Нигерия',
+    'KE': '🇰🇪 Кения',
+    'DZ': '🇩🇿 Алжир',
+    'NZ': '🇳🇿 Новая Зеландия',
+    'XX': '❓ Неизвестно'
+};
+
 // Площадь стран в км² (приблизительные значения)
 const COUNTRY_AREAS = {
   'RU': 17098242,  // Россия
@@ -249,70 +304,8 @@ export default async function handler(req, res) {
       const maxCells = Math.floor(countryArea / CELL_SIZE_KM2); // Максимум клеток в стране
       const percentage = ((count / maxCells) * 100).toFixed(4);
       
-      // Определяем название и флаг
-      let name = '🌍 Неизвестно';
-      if (code === 'RU') name = '🇷🇺 Россия';
-      else if (code === 'US') name = '🇺🇸 США';
-      else if (code === 'CN') name = '🇨🇳 Китай';
-      else if (code === 'CA') name = '🇨🇦 Канада';
-      else if (code === 'BR') name = '🇧🇷 Бразилия';
-      else if (code === 'AU') name = '🇦🇺 Австралия';
-      else if (code === 'IN') name = '🇮🇳 Индия';
-      else if (code === 'FR') name = '🇫🇷 Франция';
-      else if (code === 'DE') name = '🇩🇪 Германия';
-      else if (code === 'IT') name = '🇮🇹 Италия';
-      else if (code === 'ES') name = '🇪🇸 Испания';
-      else if (code === 'GB') name = '🇬🇧 Великобритания';
-      else if (code === 'JP') name = '🇯🇵 Япония';
-      else if (code === 'KR') name = '🇰🇷 Южная Корея';
-      else if (code === 'MX') name = '🇲🇽 Мексика';
-      else if (code === 'AR') name = '🇦🇷 Аргентина';
-      else if (code === 'ZA') name = '🇿🇦 ЮАР';
-      else if (code === 'EG') name = '🇪🇬 Египет';
-      else if (code === 'TR') name = '🇹🇷 Турция';
-      else if (code === 'SA') name = '🇸🇦 Саудовская Аравия';
-      else if (code === 'ID') name = '🇮🇩 Индонезия';
-      else if (code === 'TH') name = '🇹🇭 Таиланд';
-      else if (code === 'VN') name = '🇻🇳 Вьетнам';
-      else if (code === 'PH') name = '🇵🇭 Филиппины';
-      else if (code === 'PL') name = '🇵🇱 Польша';
-      else if (code === 'UA') name = '🇺🇦 Украина';
-      else if (code === 'BY') name = '🇧🇾 Беларусь';
-      else if (code === 'KZ') name = '🇰🇿 Казахстан';
-      else if (code === 'SE') name = '🇸🇪 Швеция';
-      else if (code === 'NO') name = '🇳🇴 Норвегия';
-      else if (code === 'FI') name = '🇫🇮 Финляндия';
-      else if (code === 'DK') name = '🇩🇰 Дания';
-      else if (code === 'NL') name = '🇳🇱 Нидерланды';
-      else if (code === 'BE') name = '🇧🇪 Бельгия';
-      else if (code === 'CH') name = '🇨🇭 Швейцария';
-      else if (code === 'AT') name = '🇦🇹 Австрия';
-      else if (code === 'CZ') name = '🇨🇿 Чехия';
-      else if (code === 'PT') name = '🇵🇹 Португалия';
-      else if (code === 'GR') name = '🇬🇷 Греция';
-      else if (code === 'RO') name = '🇷🇴 Румыния';
-      else if (code === 'HU') name = '🇭🇺 Венгрия';
-      else if (code === 'BG') name = '🇧🇬 Болгария';
-      else if (code === 'RS') name = '🇷🇸 Сербия';
-      else if (code === 'HR') name = '🇭🇷 Хорватия';
-      else if (code === 'SI') name = '🇸🇮 Словения';
-      else if (code === 'SK') name = '🇸🇰 Словакия';
-      else if (code === 'LT') name = '🇱🇹 Литва';
-      else if (code === 'LV') name = '🇱🇻 Латвия';
-      else if (code === 'EE') name = '🇪🇪 Эстония';
-      else if (code === 'IE') name = '🇮🇪 Ирландия';
-      else if (code === 'IS') name = '🇮🇸 Исландия';
-      else if (code === 'NZ') name = '🇳🇿 Новая Зеландия';
-      else if (code === 'CL') name = '🇨🇱 Чили';
-      else if (code === 'CO') name = '🇨🇴 Колумбия';
-      else if (code === 'PE') name = '🇵🇪 Перу';
-      else if (code === 'VE') name = '🇻🇪 Венесуэла';
-      else if (code === 'EC') name = '🇪🇨 Эквадор';
-      else if (code === 'BO') name = '🇧🇴 Боливия';
-      else if (code === 'PY') name = '🇵🇾 Парагвай';
-      else if (code === 'UY') name = '🇺🇾 Уругвай';
-      else if (code === 'GY') name = '🇬🇾 Гайана';
-      else if (code === 'SR') name = '🇸🇷 Суринам';
+      // Получаем название из объекта
+      const name = countryNames[code] || '❓ Неизвестно';
       
       countryStats.push({
         name,
