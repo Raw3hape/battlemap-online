@@ -73,12 +73,20 @@ export default async function handler(req, res) {
         }
         
         // 7. Полностью очищаем pixels:map от любого мусора
-        const allKeys = await redis.hkeys('pixels:map');
-        if (allKeys && allKeys.length > 0) {
-            for (const key of allKeys) {
-                await redis.hdel('pixels:map', key);
+        try {
+            const allKeys = await redis.hkeys('pixels:map');
+            if (allKeys && allKeys.length > 0) {
+                // Удаляем каждый ключ отдельно
+                for (const key of allKeys) {
+                    await redis.hdel('pixels:map', key);
+                }
+                console.log(`✓ Удалено ${allKeys.length} записей из pixels:map`);
             }
-            console.log(`✓ Удалено ${allKeys.length} записей из pixels:map`);
+        } catch (e) {
+            console.log('Ошибка при очистке pixels:map:', e);
+            // Пробуем удалить весь хэш целиком
+            await redis.del('pixels:map');
+            console.log('✓ Удален весь pixels:map');
         }
         
         // 8. Устанавливаем чистое начальное состояние
