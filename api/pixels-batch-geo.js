@@ -170,9 +170,11 @@ export default async function handler(req, res) {
                 timestamp: timestamp
             };
             
-            // Сохраняем пиксель (ВАЖНО: правильный формат JSON)
+            // Сохраняем пиксель (ВАЖНО: используем объект для Upstash)
             promises.push(
-                redis.hset('pixels:map', pixel.position, JSON.stringify(pixelData))
+                redis.hset('pixels:map', {
+                    [pixel.position]: JSON.stringify(pixelData)
+                })
             );
             
             // Обновляем статистику страна+цвет
