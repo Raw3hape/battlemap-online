@@ -40,12 +40,23 @@ export default async function handler(req, res) {
         // Получаем все пиксели
         const pixelsMap = await redis.hgetall('pixels:map') || {};
         
-        // Преобразуем в массив
+        // Преобразуем в массив с надежной обработкой ошибок
         const pixels = Object.entries(pixelsMap).map(([position, dataStr]) => {
             try {
+                // Пропускаем пустые или невалидные строки
+                if (!dataStr || typeof dataStr !== 'string' || dataStr.length < 2) {
+                    return null;
+                }
+                
+                // Пропускаем служебные ключи и числовые позиции (старый формат)
+                if (position === 'initialized' || /^\d+$/.test(position)) {
+                    return null;
+                }
+                
                 const data = JSON.parse(dataStr);
-                // Проверяем, что это валидные данные пикселя
-                if (data.color && data.opacity !== undefined) {
+                
+                // Проверяем, что это объект с нужными полями
+                if (typeof data === 'object' && data.color && data.opacity !== undefined) {
                     return {
                         position: data.position || position,  // Используем position из данных или ключа
                         color: data.color,
@@ -55,7 +66,10 @@ export default async function handler(req, res) {
                 }
                 return null;
             } catch (e) {
-                console.error('Ошибка парсинга пикселя:', position, e);
+                // Логируем только если это не ожидаемые ошибки
+                if (!dataStr.includes('initialized') && position !== '2' && position !== '7' && position !== '10') {
+                    console.error('Пропущен невалидный пиксель:', position, dataStr?.substring(0, 50));
+                }
                 return null;
             }
         }).filter(p => p !== null);

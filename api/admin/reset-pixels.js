@@ -72,15 +72,18 @@ export default async function handler(req, res) {
             console.log(`✓ Очищено ${countryRevealedKeys.length} ключей country:revealed:*`);
         }
         
-        // 7. Инициализируем пустую структуру
-        await redis.hset('pixels:map', 'initialized', JSON.stringify({
-            timestamp: new Date().toISOString(),
-            version: '0.2.5'
-        }));
-        await redis.set('pixels:total', 0);
+        // 7. Полностью очищаем pixels:map от любого мусора
+        const allKeys = await redis.hkeys('pixels:map');
+        if (allKeys && allKeys.length > 0) {
+            for (const key of allKeys) {
+                await redis.hdel('pixels:map', key);
+            }
+            console.log(`✓ Удалено ${allKeys.length} записей из pixels:map`);
+        }
         
-        // Удаляем служебный ключ
-        await redis.hdel('pixels:map', 'initialized');
+        // 8. Устанавливаем чистое начальное состояние
+        await redis.set('pixels:total', 0);
+        console.log('✓ Счетчик сброшен на 0');
         
         console.log('✅ Все данные пикселей успешно очищены!');
         
